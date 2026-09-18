@@ -123,15 +123,15 @@ export function WfdAudioCard({
           </p>
         </div>
       </div>
-      <p
-        className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
-        style={{ background: "var(--wfd-red-tint)", color: "var(--wfd-red-dark)" }}
-      >
-        <TriangleAlert className="size-3.5 shrink-0" />
-        {unsupported
-          ? "Trình duyệt không hỗ trợ đọc văn bản tự động"
-          : "Lắng nghe cẩn thận - Bạn chỉ được nghe 1 lần"}
-      </p>
+      {unsupported && (
+        <p
+          className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+          style={{ background: "var(--wfd-red-tint)", color: "var(--wfd-red-dark)" }}
+        >
+          <TriangleAlert className="size-3.5 shrink-0" />
+          Trình duyệt không hỗ trợ đọc văn bản tự động
+        </p>
+      )}
     </div>
   );
 }

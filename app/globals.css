@@ -142,7 +142,7 @@
  * lại --primary/--brand-accent sang các giá trị --wfd-red/--wfd-navy này.
  */
 .wfd-theme {
-  --wfd-bg: #fbf9fb;
+  --wfd-bg: #f9f8f6;
   --wfd-surface: #ffffff;
   --wfd-surface-2: #fcfbfd;
   --wfd-border: #ece8f2;

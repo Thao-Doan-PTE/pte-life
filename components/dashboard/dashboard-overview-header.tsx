@@ -62,9 +62,9 @@ export function DashboardOverviewHeader({
             <div className="flex flex-wrap items-center gap-3">
               <span
                 className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold"
-                style={{ background: "#FFF1E0", color: "#C2410C" }}
+                style={{ background: "#FFD9A8", color: "#C2410C" }}
               >
-                🔥 {currentStreak} ngày liên tiếp
+                🔥 Luyện tập {currentStreak} ngày liên tiếp
               </span>
               {scoreDelta2Weeks !== 0 && (
                 <span

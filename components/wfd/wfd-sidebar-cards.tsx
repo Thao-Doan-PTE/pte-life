@@ -1,17 +1,25 @@
 import { CheckCircle2 } from "lucide-react";
 
-export function WfdBankCard({ typeName }: { typeName: string }) {
+export function WfdBankCard({
+  typeName,
+  title,
+  description,
+}: {
+  typeName: string;
+  title?: string;
+  description?: string;
+}) {
   return (
     <div
       className="rounded-2xl border p-5"
       style={{ background: "var(--wfd-red-tint)", borderColor: "var(--wfd-red-tint-border)" }}
     >
       <p className="text-sm font-bold uppercase" style={{ color: "var(--wfd-red-dark)" }}>
-        Trọn bộ câu đề tủ {typeName}
+        {title ?? `Trọn bộ câu đề tủ ${typeName}`}
       </p>
       <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--wfd-muted)" }}>
-        Nằm trong bộ đề tủ {typeName} được PTELife tổng hợp và cập nhật thường xuyên
-        hàng tuần theo đề thi thật.
+        {description ??
+          `Nằm trong bộ đề tủ ${typeName} được PTELife tổng hợp và cập nhật thường xuyên hàng tuần theo đề thi thật.`}
       </p>
     </div>
   );

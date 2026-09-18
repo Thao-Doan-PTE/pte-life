@@ -108,25 +108,17 @@ export function WfdPlayScreen({
         </div>
 
         <div>
-          <div className="flex items-center gap-2">
-            <p
-              className="text-xs font-bold tracking-wide uppercase"
-              style={{ color: "var(--wfd-red-dark)" }}
-            >
-              Write From Dictation
-            </p>
+          <h1 className="text-2xl font-bold sm:text-[26px]">
+            Nghe đoạn ghi âm và gõ lại chính xác câu bạn vừa nghe
+          </h1>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm" style={{ color: "var(--wfd-muted)" }}>
             <span
-              className="wfd-mono rounded-md px-1.5 py-0.5 text-[10px] font-bold"
-              style={{ background: "var(--wfd-code-bg)", color: "var(--wfd-ink)" }}
+              className="wfd-mono rounded-md border px-1.5 py-0.5 text-xs font-bold"
+              style={{ borderColor: "#0d9488", color: "#0d9488" }}
             >
               WFD
             </span>
-          </div>
-          <h1 className="mt-2 text-2xl font-bold sm:text-[26px]">
-            Nghe đoạn ghi âm và gõ lại chính xác câu bạn vừa nghe
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--wfd-muted)" }}>
-            Nghe và viết lại câu
+            Write From Dictation — nghe 1 lần duy nhất, viết lại đầy đủ và chính xác
           </p>
         </div>
 
@@ -134,7 +126,7 @@ export function WfdPlayScreen({
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-semibold" htmlFor="wfd-answer">
-            Câu trả lời của bạn
+            Nhập câu trả lời của bạn
           </label>
           <textarea
             id="wfd-answer"
@@ -150,7 +142,7 @@ export function WfdPlayScreen({
           />
           <div className="flex justify-end">
             <span className="wfd-mono text-xs" style={{ color: "var(--wfd-muted-2)" }}>
-              {wordCount} từ
+              Số từ: {wordCount}
             </span>
           </div>
         </div>
@@ -165,8 +157,9 @@ export function WfdPlayScreen({
           className="rounded-xl p-4 text-sm leading-relaxed"
           style={{ background: "var(--wfd-navy-tint-2)", color: "var(--wfd-navy)" }}
         >
-          💡 <strong>Mẹo chấm điểm:</strong> viết hoa chữ cái đầu câu và kết thúc bằng
-          dấu chấm — <strong>BẮT BUỘC</strong> để đạt điểm nội dung tối đa.
+          💡 <strong>Cách chấm điểm:</strong> Mỗi từ đúng vị trí được 1 điểm, từ thừa
+          không bị trừ điểm. Hệ thống tự động chuẩn hoá chữ hoa/thường và dấu câu
+          trước khi so khớp với đáp án gốc.
         </div>
 
         <div className="flex items-center justify-between gap-3">
@@ -216,7 +209,7 @@ export function WfdPlayScreen({
               className="flex items-center gap-1 text-sm font-semibold"
               style={{ color: "var(--wfd-muted)" }}
             >
-              Câu tiếp <ChevronRight className="size-4" />
+              Câu sau <ChevronRight className="size-4" />
             </Link>
           ) : (
             <span />
@@ -225,12 +218,18 @@ export function WfdPlayScreen({
       </div>
 
       <div className="flex flex-col gap-4">
-        <WfdBankCard typeName="Write From Dictation" />
+        <WfdBankCard
+          typeName="Write From Dictation"
+          title="Về dạng bài WFD"
+          description="Write From Dictation chiếm khoảng 5% Overall, 13% Listening và 23% Writing. Đây là dạng bài dễ ăn điểm nhất nếu luyện tập đều đặn — chỉ cần nghe kỹ và gõ đúng thứ tự từ."
+        />
         <WfdTipsCard
           tips={[
-            "Nghe kỹ trọng âm và các từ nối để không bỏ sót từ chức năng (a, the, of...).",
-            "Viết hoa chữ cái đầu câu và kết thúc bằng dấu chấm.",
-            "Không chắc chắn 100%? Vẫn nên đoán — bỏ trống mất điểm nhiều hơn viết sai.",
+            "Ghi chú nhanh các từ khoá (danh từ, động từ) ngay khi nghe, chưa cần đúng chính tả.",
+            "Ưu tiên đúng thứ tự từ hơn là cố nhớ đúng từng chữ cái.",
+            "Đừng bỏ sót mạo từ (a, an, the) và giới từ ngắn — rất dễ mất điểm.",
+            "Viết hoa chữ cái đầu câu và thêm dấu chấm cuối câu.",
+            "Nếu không chắc chính tả, cứ viết theo cách phát âm rồi rà lại trước khi nộp.",
           ]}
         />
         <WfdPearsonCard />

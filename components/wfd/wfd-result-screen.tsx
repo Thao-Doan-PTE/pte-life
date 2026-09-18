@@ -317,7 +317,11 @@ export function WfdResultScreen({
       </div>
 
       <div className="flex flex-col gap-4">
-        <WfdBankCard typeName="Write From Dictation" />
+        <WfdBankCard
+          typeName="Write From Dictation"
+          title="Về dạng bài WFD"
+          description="Write From Dictation chiếm khoảng 5% Overall, 13% Listening và 23% Writing. Đây là dạng bài dễ ăn điểm nhất nếu luyện tập đều đặn — chỉ cần nghe kỹ và gõ đúng thứ tự từ."
+        />
         <WfdPearsonCard />
       </div>
     </div>

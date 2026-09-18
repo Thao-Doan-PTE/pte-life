@@ -2,11 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Circle, Headphones, ChevronDown, ChevronUp, Flame } from "lucide-react";
+import { CheckCircle2, Circle, Headphones, ChevronDown, ChevronUp, Flame, Eye } from "lucide-react";
 
 interface WfdQuestionItem {
   id: string;
   sentence: string;
+}
+
+function firstWords(text: string, count = 3): string {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= count) return text;
+  return `${words.slice(0, count).join(" ")}...`;
 }
 
 function StatusBadge({ done }: { done: boolean }) {
@@ -125,12 +131,6 @@ export function WfdQuestionList({
               <Headphones className="size-5" />
             </div>
             <div>
-              <p
-                className="text-[11px] font-bold tracking-wide uppercase"
-                style={{ color: "var(--wfd-muted-2)" }}
-              >
-                Score weight
-              </p>
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-bold">Write From Dictation</p>
                 <span
@@ -150,11 +150,11 @@ export function WfdQuestionList({
               className="wfd-mono rounded-full border px-3 py-1 text-xs font-bold"
               style={{
                 background: "var(--wfd-surface)",
-                borderColor: "var(--wfd-red)",
+                borderColor: "var(--wfd-border)",
                 color: "var(--wfd-ink)",
               }}
             >
-              Overall: {weighting.overall}%
+              Overall: <span style={{ color: "var(--wfd-red-dark)" }}>{weighting.overall}%</span>
             </span>
             <span
               className="wfd-mono rounded-full border px-3 py-1 text-xs font-bold"
@@ -164,7 +164,7 @@ export function WfdQuestionList({
                 color: "var(--wfd-ink)",
               }}
             >
-              Listening: {weighting.listening}%
+              Listening: <span style={{ color: "var(--wfd-red-dark)" }}>{weighting.listening}%</span>
             </span>
             <span
               className="wfd-mono rounded-full border px-3 py-1 text-xs font-bold"
@@ -174,7 +174,7 @@ export function WfdQuestionList({
                 color: "var(--wfd-ink)",
               }}
             >
-              Writing: {weighting.writing}%
+              Writing: <span style={{ color: "var(--wfd-red-dark)" }}>{weighting.writing}%</span>
             </span>
             <Link
               href="/weighting?type=write-from-dictation#write-from-dictation"
@@ -237,7 +237,9 @@ export function WfdQuestionList({
                 >
                   Câu {selected ? questions.indexOf(selected) + 1 : 0}:
                 </span>
-                <span className="min-w-0 flex-1 truncate text-base">{selected?.sentence}</span>
+                <span className="min-w-0 flex-1 truncate text-base">
+                  {selected ? firstWords(selected.sentence) : ""}
+                </span>
                 {dropdownOpen ? (
                   <ChevronUp className="size-4 shrink-0" style={{ color: "var(--wfd-muted-2)" }} />
                 ) : (
@@ -280,9 +282,9 @@ export function WfdQuestionList({
                           className="wfd-mono shrink-0 text-xs font-bold"
                           style={{ color: "var(--wfd-muted-2)" }}
                         >
-                          Câu {num}
+                          Câu {num}:
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-sm">{q.sentence}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm">{firstWords(q.sentence)}</span>
                         <StatusBadge done={done} />
                       </button>
                     );
@@ -299,26 +301,26 @@ export function WfdQuestionList({
 
           {selected && (
             <div
-              className="flex flex-col gap-4 self-start rounded-2xl border p-5"
+              className="flex flex-col gap-4 rounded-2xl border border-dashed p-5"
               style={{ background: "var(--wfd-surface-2)", borderColor: "var(--wfd-border)" }}
             >
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold">
-                  Câu {questions.indexOf(selected) + 1} — xem trước
+              <div className="flex items-center gap-1.5">
+                <Eye className="size-4" style={{ color: "var(--wfd-muted-2)" }} />
+                <p className="text-sm font-bold" style={{ color: "var(--wfd-muted-2)" }}>
+                  Xem trước câu hỏi
                 </p>
-                <StatusBadge done={practicedSet.has(selected.id)} />
               </div>
-              <p className="text-sm leading-relaxed">{selected.sentence}</p>
+              <p className="text-sm leading-relaxed">&quot;{selected.sentence}&quot;</p>
               <div className="flex flex-col items-center gap-1 pt-2">
                 <Link
                   href={`/practice/listening/write-from-dictation/${selected.id}`}
                   className="flex w-full items-center justify-center gap-2 rounded-[10px] px-6 py-2.5 text-sm font-bold"
                   style={{ background: "var(--brand-accent)", color: "var(--brand-accent-foreground)" }}
                 >
-                  Bắt đầu luyện tập →
+                  Bắt đầu luyện tập
                 </Link>
                 <p className="text-xs" style={{ color: "var(--wfd-muted-2)" }}>
-                  hoặc chọn câu khác từ danh sách bên trên
+                  Câu sẽ được phát 1 lần duy nhất — hãy nghe kỹ và gõ lại chính xác từng từ.
                 </p>
               </div>
             </div>
