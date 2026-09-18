@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" width="640" height="420">
+  <rect width="640" height="420" fill="#ffffff"/>
+  <text x="320" y="36" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1a1a1a">Monthly Coffee Shop Sales (2025)</text>
+  <line x1="70" y1="360" x2="600" y2="360" stroke="#333" stroke-width="2"/>
+  <line x1="70" y1="60" x2="70" y2="360" stroke="#333" stroke-width="2"/>
+  <text x="40" y="365" font-family="Arial" font-size="12" fill="#333">0</text>
+  <text x="30" y="290" font-family="Arial" font-size="12" fill="#333">250</text>
+  <text x="30" y="220" font-family="Arial" font-size="12" fill="#333">500</text>
+  <text x="30" y="150" font-family="Arial" font-size="12" fill="#333">750</text>
+  <text x="20" y="80" font-family="Arial" font-size="12" fill="#333">1000</text>
+
+  <rect x="100" y="220" width="60" height="140" fill="#EA222A"/>
+  <text x="130" y="380" text-anchor="middle" font-family="Arial" font-size="13" fill="#333">Jan</text>
+  <text x="130" y="210" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">500</text>
+
+  <rect x="190" y="180" width="60" height="180" fill="#EA222A"/>
+  <text x="220" y="380" text-anchor="middle" font-family="Arial" font-size="13" fill="#333">Feb</text>
+  <text x="220" y="170" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">650</text>
+
+  <rect x="280" y="140" width="60" height="220" fill="#EA222A"/>
+  <text x="310" y="380" text-anchor="middle" font-family="Arial" font-size="13" fill="#333">Mar</text>
+  <text x="310" y="130" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">800</text>
+
+  <rect x="370" y="100" width="60" height="260" fill="#FF6B00"/>
+  <text x="400" y="380" text-anchor="middle" font-family="Arial" font-size="13" fill="#333">Apr</text>
+  <text x="400" y="90" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">950</text>
+
+  <rect x="460" y="160" width="60" height="200" fill="#EA222A"/>
+  <text x="490" y="380" text-anchor="middle" font-family="Arial" font-size="13" fill="#333">May</text>
+  <text x="490" y="150" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">720</text>
+</svg>

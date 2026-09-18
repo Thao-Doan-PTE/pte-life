@@ -1,0 +1,20 @@
+{
+  "nav": {
+    "speaking": "Speaking",
+    "writing": "Writing",
+    "reading": "Reading",
+    "listening": "Listening",
+    "mocktest": "Mocktest",
+    "history": "Lịch sử",
+    "logout": "Đăng xuất",
+    "toggleTheme": "Đổi giao diện sáng/tối"
+  },
+  "package": {
+    "academic": "PTE Academic",
+    "core": "PTE Core"
+  },
+  "home": {
+    "placeholderTitle": "Dashboard sẽ được xây ở Bước 2",
+    "placeholderDescription": "Khung giao diện và điều hướng đã sẵn sàng. Nội dung Dashboard (thống kê, luyện tập gần đây, bắt đầu luyện tập) sẽ được triển khai ở bước tiếp theo."
+  }
+}

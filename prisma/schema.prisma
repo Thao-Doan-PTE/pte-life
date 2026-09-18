@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ExamPackage {
+  academic
+  core
+}
+
+enum Skill {
+  speaking
+  writing
+  reading
+  listening
+}
+
+enum UserRole {
+  student
+  admin
+}
+
+enum MockTestMode {
+  question
+  section
+  full
+}
+
+enum MockTestStatus {
+  in_progress
+  completed
+}
+
+model User {
+  id               String      @id @default(cuid())
+  name             String
+  email            String      @unique
+  passwordHash     String
+  role             UserRole    @default(student)
+  examPackage      ExamPackage
+  expiresAt        DateTime
+  reservationsLeft Int         @default(2)
+  hasSeenWelcome   Boolean     @default(false)
+  avatarUrl        String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  attempts         PracticeAttempt[]
+  mockTestSessions MockTestSession[]
+  reservationLogs  ReservationLog[] @relation("ReservationLogsForUser")
+}
+
+/// Log các lần admin/CSKH gán gói, gia hạn, hoặc dùng lượt bảo lưu cho học viên (Bước 11).
+model ReservationLog {
+  id            String   @id @default(cuid())
+  userId        String
+  performedById String
+  action        String // "extend" | "reservation" | "change_package"
+  detail        String
+  createdAt     DateTime @default(now())
+
+  user User @relation("ReservationLogsForUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// 1 lượt làm Mocktest (Question Test / Section Test / Full Test — Bước 9).
+/// Không lưu điểm từng câu ở đây — điểm lấy lại từ PracticeAttempt mới nhất của
+/// mỗi câu trong questionIds khi tính kết quả, tránh trùng lặp dữ liệu chấm điểm.
+model MockTestSession {
+  id             String          @id @default(cuid())
+  userId         String
+  mode           MockTestMode
+  skill          Skill?
+  questionTypeId String?
+  questionIds    String[]
+  currentIndex   Int             @default(0)
+  status         MockTestStatus  @default(in_progress)
+  scorePct       Int?
+  startedAt      DateTime        @default(now())
+  completedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Ngân hàng câu hỏi: mỗi row là 1 câu hỏi cụ thể thuộc 1 dạng (questionTypeId
+/// khớp với id trong lib/question-types.ts). `content` linh hoạt theo từng dạng
+/// (đoạn văn, audio mẫu, đáp án đúng, các lựa chọn...) vì 22 dạng có cấu trúc rất khác nhau.
+model Question {
+  id             String        @id @default(cuid())
+  questionTypeId String
+  skill          Skill
+  code           String        @unique
+  availableIn    ExamPackage[]
+  content        Json
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  attempts PracticeAttempt[]
+
+  @@index([questionTypeId])
+}
+
+/// Kết quả 1 lượt làm bài, gắn với learner + question. Chấm rule-based (Bước 6)
+/// ghi ngay khi nộp bài; các dạng cần AI (Writing/Speaking) sẽ ghi ở Bước 7-8.
+model PracticeAttempt {
+  id             String   @id @default(cuid())
+  userId         String
+  questionId     String
+  questionTypeId String
+  scorePct       Int
+  pteScore       Int
+  isCorrect      Boolean
+  response       Json
+  durationSec    Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([questionId])
+}
