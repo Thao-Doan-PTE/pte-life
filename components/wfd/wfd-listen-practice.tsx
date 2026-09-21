@@ -6,8 +6,10 @@ import {
   ArrowLeft,
   Clock,
   FileText,
+  Gauge,
   Headphones,
   List,
+  Mic2,
   Pause,
   Play,
   Repeat,
@@ -15,6 +17,22 @@ import {
   Square,
 } from "lucide-react";
 import { fetchAzureTts, isBrowserTtsSupported, speakWithBrowserTts } from "@/lib/wfd-tts-client";
+import { PTE_VOICE_POOL } from "@/lib/azure-tts";
+
+const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5];
+
+function voiceLabel(voiceName: string | null): string {
+  if (!voiceName) return "Ngẫu nhiên (xoay vòng theo đề thi thật)";
+  const voice = PTE_VOICE_POOL.find((v) => v.name === voiceName);
+  if (!voice) return voiceName;
+  return `${voice.gender === "female" ? "Nữ" : "Nam"} (${voice.accent})`;
+}
+
+function formatClipTime(s: number): string {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
 
 interface WfdListenQuestion {
   id: string;
@@ -41,7 +59,13 @@ function selectStyle() {
   return { borderColor: "var(--wfd-border)", background: "var(--wfd-surface)", color: "var(--wfd-ink)" };
 }
 
-export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[] }) {
+export function WfdListenPractice({
+  questions,
+  backHref,
+}: {
+  questions: WfdListenQuestion[];
+  backHref: string;
+}) {
   const total = questions.length;
   const [phase, setPhase] = useState<"setup" | "playing" | "done">("setup");
   const [fromNum, setFromNum] = useState(1);
@@ -49,10 +73,15 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
   const [repeatEach, setRepeatEach] = useState(3);
   const [pauseSec, setPauseSec] = useState(2);
   const [showText, setShowText] = useState(true);
+  const [voiceOverride, setVoiceOverride] = useState<string | null>("en-AU-NatashaNeural");
+  const [playbackRate, setPlaybackRate] = useState(1);
 
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [pos, setPos] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [currentVoice, setCurrentVoice] = useState<string | null>(null);
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [durationSec, setDurationSec] = useState(0);
 
   const cancelledRef = useRef(false);
   const pausedRef = useRef(false);
@@ -62,6 +91,8 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
   const pauseSecRef = useRef(pauseSec);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceByQuestionRef = useRef<Map<string, string>>(new Map());
+  const voiceOverrideRef = useRef<string | null>(null);
+  const playbackRateRef = useRef(1);
 
   useEffect(() => {
     return () => {
@@ -99,22 +130,30 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
       return;
     }
     setPos(idx);
+    setElapsedSec(0);
+    setDurationSec(0);
     const item = list[idx];
 
-    // Giữ nguyên giọng cho các lần lặp của cùng 1 câu, đổi giọng khi sang câu mới
-    // (mô phỏng cách đề thi PTE thật xoay vòng giọng đọc giữa các speaker).
+    // Chọn giọng theo thứ tự ưu tiên: giọng cố định do học viên chọn > giữ
+    // nguyên giọng cho các lần lặp của cùng 1 câu > xoay vòng ngẫu nhiên
+    // (mô phỏng cách đề thi PTE thật đổi giọng đọc giữa các speaker).
     const reuseVoice = voiceByQuestionRef.current.get(item.id);
-    const azure = await fetchAzureTts(item.sentence, reuseVoice);
+    const voiceToUse = voiceOverrideRef.current ?? reuseVoice;
+    const azure = await fetchAzureTts(item.sentence, voiceToUse ?? undefined);
     if (cancelledRef.current) return;
 
     if (azure) {
       if (!reuseVoice) voiceByQuestionRef.current.set(item.id, azure.voiceName);
+      setCurrentVoice(azure.voiceName);
       if (pausedRef.current) {
         pendingNextIdxRef.current = idx;
         return;
       }
       const audio = new Audio(azure.url);
+      audio.playbackRate = playbackRateRef.current;
       currentAudioRef.current = audio;
+      audio.ontimeupdate = () => setElapsedSec(audio.currentTime);
+      audio.onloadedmetadata = () => setDurationSec(audio.duration || 0);
       audio.onended = () => scheduleNext(idx);
       audio.play();
       return;
@@ -128,7 +167,8 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
       pendingNextIdxRef.current = idx;
       return;
     }
-    speakWithBrowserTts(item.sentence, () => scheduleNext(idx));
+    setCurrentVoice(null);
+    speakWithBrowserTts(item.sentence, () => scheduleNext(idx), 0.95 * playbackRateRef.current);
   }
 
   function handleStart() {
@@ -144,6 +184,8 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
     pausedRef.current = false;
     pendingNextIdxRef.current = null;
     pauseSecRef.current = pauseSec;
+    voiceOverrideRef.current = voiceOverride;
+    playbackRateRef.current = playbackRate;
     voiceByQuestionRef.current = new Map();
     playlistRef.current = list;
     setPlaylist(list);
@@ -221,7 +263,7 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
 
       <div className="relative mx-auto flex max-w-[1100px] flex-col gap-6 px-5 py-8 sm:px-10">
         <Link
-          href="/practice/listening/write-from-dictation"
+          href={backHref}
           className="flex w-fit items-center gap-2 text-sm font-medium"
           style={{ color: "var(--wfd-muted)" }}
         >
@@ -339,22 +381,59 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
               </div>
             </div>
 
-            <div className="sm:w-1/3">
-              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
-                <Clock className="size-4" /> Khoảng dừng giữa các lần đọc
-              </label>
-              <select
-                className={selectClassName()}
-                style={selectStyle()}
-                value={pauseSec}
-                onChange={(e) => setPauseSec(Number(e.target.value))}
-              >
-                {PAUSE_OPTIONS.map((n) => (
-                  <option key={n} value={n}>
-                    {n} giây
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                  <Clock className="size-4" /> Khoảng dừng giữa các lần đọc
+                </label>
+                <select
+                  className={selectClassName()}
+                  style={selectStyle()}
+                  value={pauseSec}
+                  onChange={(e) => setPauseSec(Number(e.target.value))}
+                >
+                  {PAUSE_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {n} giây
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                  <Mic2 className="size-4" /> Giọng đọc
+                </label>
+                <select
+                  className={selectClassName()}
+                  style={selectStyle()}
+                  value={voiceOverride ?? ""}
+                  onChange={(e) => setVoiceOverride(e.target.value || null)}
+                >
+                  <option value="">{voiceLabel(null)}</option>
+                  {PTE_VOICE_POOL.map((v) => (
+                    <option key={v.name} value={v.name}>
+                      {voiceLabel(v.name)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                  <Gauge className="size-4" /> Tốc độ đọc
+                </label>
+                <select
+                  className={selectClassName()}
+                  style={selectStyle()}
+                  value={playbackRate}
+                  onChange={(e) => setPlaybackRate(Number(e.target.value))}
+                >
+                  {SPEED_OPTIONS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}x
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <label
@@ -436,10 +515,43 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
             </div>
 
             <div
-              className="flex size-20 items-center justify-center rounded-full"
-              style={{ background: "var(--wfd-red-tint)", color: "var(--wfd-red-dark)" }}
+              className="flex w-full max-w-md flex-col gap-3 rounded-2xl border p-4"
+              style={{ borderColor: "var(--wfd-border)", background: "var(--wfd-surface)" }}
             >
-              <Headphones className="size-9" />
+              <div className="flex items-center justify-between text-xs" style={{ color: "var(--wfd-muted)" }}>
+                <span>Giọng đọc: {voiceLabel(currentVoice)}</span>
+                <span>Tốc độ: {playbackRate}x</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={togglePause}
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full text-white"
+                  style={{ background: "var(--wfd-navy)" }}
+                  aria-label={isPaused ? "Tiếp tục" : "Tạm dừng"}
+                >
+                  {isPaused ? (
+                    <Play className="size-4 translate-x-[1px]" fill="currentColor" />
+                  ) : (
+                    <Pause className="size-4" fill="currentColor" />
+                  )}
+                </button>
+                <div
+                  className="h-1.5 flex-1 overflow-hidden rounded-full"
+                  style={{ background: "var(--wfd-border)" }}
+                >
+                  <div
+                    className="h-full rounded-full transition-[width]"
+                    style={{
+                      width: `${durationSec > 0 ? (elapsedSec / durationSec) * 100 : 0}%`,
+                      background: "var(--wfd-navy)",
+                    }}
+                  />
+                </div>
+                <span className="wfd-mono shrink-0 text-xs" style={{ color: "var(--wfd-muted-2)" }}>
+                  {formatClipTime(elapsedSec)} / {formatClipTime(durationSec)}
+                </span>
+              </div>
             </div>
 
             {showText ? (
@@ -457,32 +569,14 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
               </p>
             )}
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={togglePause}
-                className="flex items-center gap-2 rounded-[10px] px-6 py-2.5 text-sm font-bold text-white"
-                style={{ background: "var(--wfd-red)" }}
-              >
-                {isPaused ? (
-                  <>
-                    <Play className="size-4" fill="currentColor" /> Tiếp tục
-                  </>
-                ) : (
-                  <>
-                    <Pause className="size-4" fill="currentColor" /> Tạm dừng
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={handleStop}
-                className="flex items-center gap-2 rounded-[10px] border px-6 py-2.5 text-sm font-bold"
-                style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
-              >
-                <Square className="size-4" /> Dừng & quay lại cài đặt
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleStop}
+              className="flex items-center gap-2 rounded-[10px] border px-6 py-2.5 text-sm font-bold"
+              style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
+            >
+              <Square className="size-4" /> Dừng & quay lại cài đặt
+            </button>
           </div>
         )}
 
@@ -516,7 +610,7 @@ export function WfdListenPractice({ questions }: { questions: WfdListenQuestion[
                 Đổi cài đặt
               </button>
               <Link
-                href="/practice/listening/write-from-dictation"
+                href={backHref}
                 className="rounded-[10px] border px-6 py-2.5 text-sm font-bold"
                 style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
               >

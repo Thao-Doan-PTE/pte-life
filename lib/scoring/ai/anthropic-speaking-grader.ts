@@ -48,6 +48,13 @@ const TOOL = {
   },
 };
 
+function buildPauseInfo(input: SpeakingGradeInput): string {
+  if (input.pauseCount === undefined || input.longestPauseMs === undefined) {
+    return "chưa đo được số lần ngắt quãng (trình duyệt không hỗ trợ phân tích biên độ âm thanh thời gian thực)";
+  }
+  return `${input.pauseCount} lần ngắt quãng (khoảng lặng > 0.4s), khoảng lặng dài nhất ${(input.longestPauseMs / 1000).toFixed(1)}s`;
+}
+
 function buildPrompt(input: SpeakingGradeInput): string {
   return `Đây là bài luyện Speaking PTE Academic/Core, dạng: ${TASK_LABELS[input.taskType]}
 
@@ -58,7 +65,7 @@ function buildPrompt(input: SpeakingGradeInput): string {
 Vì vậy khi chấm:
 - "content": đánh giá dựa trên transcript so với văn bản/nhiệm vụ tham chiếu bên dưới.
 - "vocabulary": đánh giá từ vựng dùng trong transcript.
-- "fluency": dựa vào tốc độ nói đo được là ${input.wordsPerMinute} từ/phút (chuẩn PTE tự nhiên là 120–160 từ/phút) và ${input.fillerWordCount} từ đệm (um, uh...) phát hiện được trong transcript — không dựa vào audio thật.
+- "fluency": dựa vào tốc độ nói đo được là ${input.wordsPerMinute} từ/phút (chuẩn PTE tự nhiên là 120–160 từ/phút), ${input.fillerWordCount} từ đệm (um, uh...) phát hiện được trong transcript, và ${buildPauseInfo(input)} — đo bằng phân tích biên độ âm thanh thời gian thực (Web Audio API), không phải phân tích ngữ điệu/âm vị học đầy đủ như Versant thật. Ngắt quãng ngắn tự nhiên giữa các cụm từ là bình thường; chỉ đánh giá thấp Oral Fluency nếu số lần ngắt quãng nhiều bất thường hoặc khoảng lặng dài nhất vượt 1.5-2 giây (dấu hiệu học viên bị khựng/quên bài).
 - "pronunciation": BẮT BUỘC trả về scorePct = 50 và feedback CHÍNH XÁC là: "Phiên bản hiện tại chưa tích hợp công cụ phân tích phát âm chuyên dụng (ví dụ Azure Pronunciation Assessment) vì chưa nghe được audio thật. Điểm này chỉ là placeholder, sẽ được thay thế ở bản nâng cấp V2." — không tự suy đoán điểm phát âm từ transcript.
 
 ${input.referenceText ? `Văn bản/nhiệm vụ tham chiếu:\n"""\n${input.referenceText}\n"""\n` : ""}

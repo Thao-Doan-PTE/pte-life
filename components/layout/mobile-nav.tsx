@@ -60,9 +60,11 @@ export function MobileNav() {
                     >
                       <span className="min-w-0 truncate">{item.name}</span>
                       <Badge variant="secondary" className="shrink-0 text-xs">
-                        {item.overallWeightPct != null
-                          ? `${item.overallWeightPct}%`
-                          : "TBD"}
+                        {item.overallWeightPct == null
+                          ? "TBD"
+                          : item.overallWeightPct === 0
+                            ? "< 1%"
+                            : `${item.overallWeightPct}%`}
                       </Badge>
                     </SheetClose>
                   ))}

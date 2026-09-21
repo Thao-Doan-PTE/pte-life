@@ -158,6 +158,8 @@
   --wfd-navy-tint-2: #eef0fa;
   --wfd-green: #15803d;
   --wfd-green-tint: #e3f5ea;
+  --wfd-amber: #b45309;
+  --wfd-amber-tint: #fef3c7;
   --wfd-black-sem: #14121a;
   --wfd-black-tint: #eceaef;
   --wfd-code-bg: #f3f1f7;
@@ -165,7 +167,7 @@
   --wfd-secondary-text: var(--wfd-red-dark);
   background: var(--wfd-bg);
   color: var(--wfd-ink);
-  font-family: var(--font-wfd-sans), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-wfd-heading), system-ui, -apple-system, sans-serif;
 }
 
 .dark .wfd-theme {
@@ -185,6 +187,8 @@
   --wfd-navy-tint-2: #23223f;
   --wfd-green: #4ade80;
   --wfd-green-tint: #16301f;
+  --wfd-amber: #fbbf24;
+  --wfd-amber-tint: #3f2d0e;
   --wfd-black-sem: #f2f2f2;
   --wfd-black-tint: #2a2a2a;
   --wfd-code-bg: #262626;

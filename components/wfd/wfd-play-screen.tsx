@@ -2,29 +2,36 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Headphones } from "lucide-react";
 import { WfdAudioCard } from "@/components/wfd/wfd-audio-card";
 import { WfdBankCard, WfdTipsCard, WfdPearsonCard } from "@/components/wfd/wfd-sidebar-cards";
 import { WfdResultScreen } from "@/components/wfd/wfd-result-screen";
 import { submitAttemptAction, getPreviousAttemptScore } from "@/lib/actions/practice";
+import { FavoriteStarButton } from "@/components/practice/favorite-star-button";
 import type { ScoreResult } from "@/lib/scoring/types";
 
 export function WfdPlayScreen({
   questionId,
+  questionCode,
   sentence,
   prevHref,
   nextHref,
   listHref,
   streakDays,
   questionNumber,
+  total,
+  isFavorited,
 }: {
   questionId: string;
+  questionCode: string;
   sentence: string;
   prevHref: string | null;
   nextHref: string | null;
   listHref: string;
   streakDays: number;
   questionNumber: number;
+  total: number;
+  isFavorited: boolean;
 }) {
   const [hasPlayed, setHasPlayed] = useState(false);
   const [answer, setAnswer] = useState("");
@@ -89,7 +96,7 @@ export function WfdPlayScreen({
             className="flex items-center gap-1 text-sm font-medium"
             style={{ color: "var(--wfd-muted)" }}
           >
-            <ChevronLeft className="size-4" /> Danh sách câu hỏi
+            <ArrowLeft className="size-4" /> Danh sách câu hỏi
           </Link>
           <div className="flex items-center gap-2">
             <span
@@ -102,27 +109,54 @@ export function WfdPlayScreen({
               className="wfd-mono rounded-full px-3 py-1 text-xs font-bold"
               style={{ background: "var(--wfd-code-bg)", color: "var(--wfd-ink)" }}
             >
-              Câu #{questionNumber}
+              Câu {questionNumber} / {total}
             </span>
           </div>
         </div>
 
-        <div>
-          <h1 className="text-2xl font-bold sm:text-[26px]">
-            Nghe đoạn ghi âm và gõ lại chính xác câu bạn vừa nghe
-          </h1>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm" style={{ color: "var(--wfd-muted)" }}>
-            <span
-              className="wfd-mono rounded-md border px-1.5 py-0.5 text-xs font-bold"
-              style={{ borderColor: "#0d9488", color: "#0d9488" }}
-            >
-              WFD
-            </span>
-            Write From Dictation — nghe 1 lần duy nhất, viết lại đầy đủ và chính xác
-          </p>
+        <div className="flex items-center gap-3">
+          <div
+            className="flex size-14 shrink-0 items-center justify-center rounded-2xl text-lg font-extrabold text-white"
+            style={{ background: "#0d9488" }}
+          >
+            WFD
+          </div>
+          <h1 className="text-2xl font-bold sm:text-[26px]">Write From Dictation</h1>
         </div>
 
-        <WfdAudioCard sentence={sentence} questionId={questionId} onPlayed={() => setHasPlayed(true)} />
+        <div
+          className="flex items-start gap-2.5 rounded-lg border-t-2 px-4 py-3 text-sm font-medium"
+          style={{ borderColor: "#f59e0b", background: "var(--wfd-code-bg)", color: "var(--wfd-ink)" }}
+        >
+          <Headphones className="mt-0.5 size-4 shrink-0" style={{ color: "#f59e0b" }} />
+          <p>Nghe đoạn ghi âm và gõ lại chính xác câu bạn vừa nghe — nghe 1 lần duy nhất, viết lại đầy đủ và chính xác.</p>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4" style={{ borderColor: "var(--wfd-border)" }}>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="wfd-mono rounded-full px-3 py-1 text-xs font-bold"
+              style={{ background: "var(--wfd-black-tint)", color: "var(--wfd-ink)" }}
+            >
+              #{questionCode}
+            </span>
+            <span
+              className="rounded-full px-3 py-1 text-xs font-bold"
+              style={{ background: "var(--wfd-navy-tint)", color: "var(--wfd-navy)" }}
+            >
+              Write From Dictation
+            </span>
+            <span
+              className="rounded-full border px-3 py-1 text-xs font-bold"
+              style={{ borderColor: "#f59e0b", color: "#f59e0b" }}
+            >
+              Trung bình
+            </span>
+          </div>
+          <FavoriteStarButton questionId={questionId} initialFavorited={isFavorited} />
+        </div>
+
+        <WfdAudioCard sentence={sentence} onPlayed={() => setHasPlayed(true)} />
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-semibold" htmlFor="wfd-answer">

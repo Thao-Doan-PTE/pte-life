@@ -32,7 +32,9 @@ const FILLER_WORDS = /\b(um+|uh+|erm+|like|you know|ừm+|ờ+)\b/gi;
 export async function submitSpeakingAttemptAction(
   questionId: string,
   transcript: string,
-  durationSeconds: number
+  durationSeconds: number,
+  pauseCount?: number,
+  longestPauseMs?: number
 ): Promise<SpeakingSubmitResult> {
   const session = await auth();
   if (!session?.user?.id) {
@@ -56,6 +58,8 @@ export async function submitSpeakingAttemptAction(
     durationSeconds,
     wordsPerMinute,
     fillerWordCount,
+    pauseCount,
+    longestPauseMs,
     referenceText: getReferenceText(content),
   });
 
@@ -79,6 +83,8 @@ export async function submitSpeakingAttemptAction(
         durationSeconds,
         wordsPerMinute,
         fillerWordCount,
+        pauseCount,
+        longestPauseMs,
         grade,
       } as unknown as Prisma.InputJsonValue,
       durationSec: Math.max(0, Math.round(durationSeconds)),

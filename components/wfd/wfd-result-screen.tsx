@@ -32,8 +32,11 @@ export function WfdResultScreen({
   onRetry: () => void;
 }) {
   const diff = result.reveal.diff as DictationWordDiff[];
-  const correctCount = diff.filter((d) => d.status === "correct").length;
-  const total = diff.length;
+  const refDiff = diff.filter((d) => d.status !== "extra");
+  const correctCount = refDiff.filter(
+    (d) => d.status === "correct" || d.status === "wrong-case"
+  ).length;
+  const total = refDiff.length;
   const grammarOk = checkCapitalizationAndPeriod(submittedAnswer);
   const ringPct = Math.min(100, (result.pteScore / 90) * 100);
   const userWords = submittedAnswer.trim().length ? submittedAnswer.trim().split(/\s+/) : [];
@@ -178,7 +181,7 @@ export function WfdResultScreen({
                   className="text-[11px] font-bold tracking-wide uppercase"
                   style={{ color: "var(--wfd-muted-2)" }}
                 >
-                  Đáp án gốc
+                  Đáp án chuẩn
                 </p>
                 <button
                   type="button"
@@ -197,29 +200,83 @@ export function WfdResultScreen({
                 className="mb-1 text-[11px] font-bold tracking-wide uppercase"
                 style={{ color: "var(--wfd-muted-2)" }}
               >
-                Bạn đã viết
+                Bài làm của bạn
               </p>
-              <p className="flex flex-wrap gap-x-1 text-[17px] leading-[1.9]">
-                {diff.map((d, i) => (
-                  <span
-                    key={i}
-                    style={
-                      d.status === "wrong"
-                        ? { borderBottom: "2px dashed var(--wfd-red)", color: "var(--wfd-red-dark)" }
-                        : d.status === "missing"
-                          ? {
-                              borderBottom: "2px dashed var(--wfd-black-sem)",
-                              color: "var(--wfd-muted-2)",
-                            }
-                          : undefined
-                    }
-                  >
-                    {d.status === "missing" ? "___" : (userWords[i] ?? d.word)}
-                  </span>
-                ))}
+              <p className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1 text-[17px] leading-[1.9]">
+                {diff.map((d, i) => {
+                  const userWord = userWords[i] ?? d.userWord;
+                  if (d.status === "correct") {
+                    return (
+                      <span
+                        key={i}
+                        style={{ borderBottom: "2px solid var(--wfd-green)", color: "var(--wfd-ink)" }}
+                      >
+                        {userWord ?? d.word}
+                      </span>
+                    );
+                  }
+                  if (d.status === "wrong") {
+                    return (
+                      <span key={i} className="inline-flex items-baseline gap-1">
+                        <span style={{ color: "var(--wfd-red-dark)", textDecoration: "line-through" }}>
+                          {userWord}
+                        </span>
+                        <span
+                          style={{
+                            borderBottom: "2px dashed var(--wfd-red)",
+                            color: "var(--wfd-red-dark)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          [{d.word}]
+                        </span>
+                      </span>
+                    );
+                  }
+                  if (d.status === "missing") {
+                    return (
+                      <span
+                        key={i}
+                        style={{
+                          borderBottom: "2px dashed var(--wfd-red)",
+                          color: "var(--wfd-red-dark)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        [{d.word}]
+                      </span>
+                    );
+                  }
+                  if (d.status === "wrong-case") {
+                    return (
+                      <span key={i} className="inline-flex items-baseline gap-1">
+                        <span
+                          style={{
+                            borderBottom: "2px dotted var(--wfd-amber)",
+                            color: "var(--wfd-amber)",
+                          }}
+                        >
+                          {userWord}
+                        </span>
+                        <span className="text-sm italic" style={{ color: "var(--wfd-muted-2)" }}>
+                          ({d.word})
+                        </span>
+                      </span>
+                    );
+                  }
+                  // extra
+                  return (
+                    <span
+                      key={i}
+                      style={{ borderBottom: "2px dotted var(--wfd-muted-2)", color: "var(--wfd-muted-2)" }}
+                    >
+                      {userWord ?? d.word}
+                    </span>
+                  );
+                })}
               </p>
             </div>
-            <div className="mt-1 flex items-center gap-4 text-xs font-semibold">
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold">
               <span className="flex items-center gap-1.5">
                 <span className="size-2 rounded-full" style={{ background: "var(--wfd-green)" }} />
                 Từ đúng
@@ -231,6 +288,14 @@ export function WfdResultScreen({
               <span className="flex items-center gap-1.5">
                 <span className="size-2 rounded-full" style={{ background: "var(--wfd-black-sem)" }} />
                 Thiếu
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full" style={{ background: "var(--wfd-amber)" }} />
+                Sai định dạng (viết hoa)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full" style={{ background: "var(--wfd-muted-2)" }} />
+                Từ thừa (không trừ điểm)
               </span>
             </div>
           </div>
@@ -252,20 +317,36 @@ export function WfdResultScreen({
                       ? "var(--wfd-green)"
                       : d.status === "wrong"
                         ? "var(--wfd-red-dark)"
-                        : "var(--wfd-black-sem)",
+                        : d.status === "wrong-case"
+                          ? "var(--wfd-amber)"
+                          : d.status === "extra"
+                            ? "var(--wfd-muted-2)"
+                            : "var(--wfd-black-sem)",
                   background:
                     d.status === "correct"
                       ? "var(--wfd-green-tint)"
                       : d.status === "wrong"
                         ? "var(--wfd-red-tint)"
-                        : "var(--wfd-black-tint)",
+                        : d.status === "wrong-case"
+                          ? "var(--wfd-amber-tint)"
+                          : d.status === "extra"
+                            ? "var(--wfd-code-bg)"
+                            : "var(--wfd-black-tint)",
                 }}
               >
                 {d.word}
                 {d.status !== "correct" && (
                   <span style={{ opacity: 0.75, fontWeight: 500 }}>
                     {" "}
-                    ({d.status === "wrong" ? "sai" : "thiếu"})
+                    (
+                    {d.status === "wrong"
+                      ? "sai"
+                      : d.status === "missing"
+                        ? "thiếu"
+                        : d.status === "wrong-case"
+                          ? "sai định dạng"
+                          : "thừa"}
+                    )
                   </span>
                 )}
               </span>

@@ -15,6 +15,11 @@ export interface SkillProgress {
   practicedQuestions: number;
   progressPct: number;
   topType: { id: string; name: string } | null;
+  /** Điểm PTE trung bình (0-90) cộng dồn vào kỹ năng này — các dạng bài tích hợp
+   * (VD: Write From Dictation, Repeat Sentence) đóng góp điểm vào cả 2 kỹ năng
+   * theo bảng tỉ trọng thật, không chỉ riêng kỹ năng chính của dạng bài đó. */
+  avgPteScore: number | null;
+  scoredAttemptCount: number;
 }
 
 export interface DashboardOverview {

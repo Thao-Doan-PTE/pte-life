@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
-import { Headphones, Mic, BookOpen, PenLine, ArrowRight, Star } from "lucide-react";
+import { Headphones, Mic, BookOpen, PenLine, ArrowRight, Star, Gauge } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getQuestionTypesBySkill, SKILL_LABELS, type Skill } from "@/lib/question-types";
@@ -60,11 +60,19 @@ export function StartPracticeGrid({ progress }: { progress: SkillProgress[] }) {
                 >
                   <Icon className="size-5" />
                 </div>
-                <div>
-                  <p className="font-medium">{SKILL_LABELS[skill]}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {SKILL_DESCRIPTORS[skill]} · {typesForSkill.length} module
-                  </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{SKILL_LABELS[skill]}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {SKILL_DESCRIPTORS[skill]} · {typesForSkill.length} module
+                    </p>
+                  </div>
+                  {skillProgress?.avgPteScore != null && (
+                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-2 py-1 text-xs font-semibold">
+                      <Gauge className="size-3 text-primary" />
+                      {skillProgress.avgPteScore}/90
+                    </span>
+                  )}
                 </div>
                 <div>
                   <div className="h-1.5 rounded-full bg-muted">

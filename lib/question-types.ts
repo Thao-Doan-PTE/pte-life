@@ -39,6 +39,16 @@ export const SKILL_LABELS: Record<Skill, string> = {
   listening: "Listening",
 };
 
+/** Màu nhấn riêng cho từng kỹ năng — đồng bộ với bảng màu 4 thẻ kỹ năng ở trang chủ
+ * (components/dashboard/start-practice-grid.tsx) để badge mã dạng câu hỏi phân biệt
+ * trực quan theo Nghe/Nói/Đọc/Viết trên toàn app. */
+export const SKILL_ACCENT_COLOR: Record<Skill, string> = {
+  speaking: "#f59e0b",
+  writing: "#8b5cf6",
+  reading: "#3b82f6",
+  listening: "#e4222b",
+};
+
 export const QUESTION_TYPES: QuestionType[] = [
   // Speaking (7)
   {
@@ -319,4 +329,16 @@ export function getQuestionTypesBySkill(skill: Skill): QuestionType[] {
 
 export function getQuestionTypesForPackage(pkg: ExamPackage): QuestionType[] {
   return QUESTION_TYPES.filter((q) => q.availableIn.includes(pkg));
+}
+
+const ALL_SKILLS: Skill[] = ["speaking", "writing", "reading", "listening"];
+
+/** Các dạng bài "tích hợp" (VD: WFD, Repeat Sentence) đóng góp điểm vào nhiều hơn 1
+ * kỹ năng cùng lúc theo đúng bảng tỉ trọng PTE thật — trả về danh sách kỹ năng mà
+ * điểm của 1 lượt làm dạng bài này nên được cộng vào, dùng cho thống kê điểm theo
+ * kỹ năng ở dashboard (không ảnh hưởng gì đến cách chấm điểm của bản thân câu hỏi). */
+export function getContributingSkills(type: QuestionType): Skill[] {
+  if (!type.weighting) return [type.skill];
+  const skills = ALL_SKILLS.filter((skill) => (type.weighting![skill] ?? 0) > 0);
+  return skills.length > 0 ? skills : [type.skill];
 }

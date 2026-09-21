@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { beVietnamPro, jetbrainsMono } from "@/lib/wfd-fonts";
+import { beVietnamPro, jetbrainsMono, plusJakartaSans } from "@/lib/wfd-fonts";
 
 export function WfdShell({ children }: { children: ReactNode }) {
   return (
     <div
-      className={`wfd-theme min-h-screen ${beVietnamPro.variable} ${jetbrainsMono.variable}`}
+      className={`wfd-theme min-h-screen ${beVietnamPro.variable} ${jetbrainsMono.variable} ${plusJakartaSans.variable}`}
     >
       {children}
     </div>

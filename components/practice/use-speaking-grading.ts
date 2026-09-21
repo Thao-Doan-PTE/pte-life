@@ -21,7 +21,9 @@ export function useSpeakingGrading(questionId: string) {
       const res = await submitSpeakingAttemptAction(
         questionId,
         recording.transcript,
-        recording.durationSeconds
+        recording.durationSeconds,
+        recording.pauseCount,
+        recording.longestPauseMs
       );
       setResult(res);
     } catch {

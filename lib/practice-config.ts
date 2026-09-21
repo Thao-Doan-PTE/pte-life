@@ -7,6 +7,17 @@ export interface PracticeInstructions {
   maxWords?: number;
 }
 
+/** 4 dạng dùng chung components/practice/players/speaking-audio-task-player.tsx
+ * (nghe audio rồi ghi âm trả lời) — dùng để bật giao diện redesign (header mới,
+ * nghe lại câu, khung ghi âm luôn hiện, thanh điều hướng có nút Thử lại) chỉ cho
+ * đúng 4 dạng này, không lan ra 17 dạng khác. */
+export const AUDIO_TASK_TYPE_IDS = new Set([
+  "repeat-sentence",
+  "retell-lecture",
+  "answer-short-question",
+  "summarize-group-discussion",
+]);
+
 /**
  * Hướng dẫn thời gian/luật làm bài theo từng dạng câu hỏi. Số giây/số từ ở đây là
  * ƯỚC LƯỢNG theo cấu trúc bài thi PTE công khai — cần đội nội dung PTE-Life xác nhận
@@ -21,7 +32,7 @@ export const PRACTICE_INSTRUCTIONS: Record<string, PracticeInstructions> = {
     recordSeconds: 40,
   },
   "repeat-sentence": {
-    description: "Nghe 1 câu, sau đó nhắc lại chính xác trong tối đa 15 giây.",
+    description: "Bạn sẽ nghe một câu. Hãy lặp lại chính xác câu đó. Câu chỉ phát một lần duy nhất!",
     prepSeconds: 3,
     recordSeconds: 15,
   },

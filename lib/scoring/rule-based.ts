@@ -79,11 +79,16 @@ export function scoreReorder(
 
 export interface DictationWordDiff {
   word: string;
-  status: "correct" | "wrong" | "missing";
+  status: "correct" | "wrong" | "missing" | "wrong-case" | "extra";
+  userWord?: string;
+}
+
+function stripPunctuation(w: string) {
+  return w.replace(/[.,!?;:"']/g, "");
 }
 
 function normalizeWord(w: string) {
-  return w.replace(/[.,!?;:"']/g, "").toLowerCase();
+  return stripPunctuation(w).toLowerCase();
 }
 
 export function scoreDictation(
@@ -91,22 +96,30 @@ export function scoreDictation(
   userAnswer: string
 ): ScoreResult {
   const refWords = referenceSentence.trim().split(/\s+/);
-  const userWordsNormalized = userAnswer
-    .trim()
-    .split(/\s+/)
-    .map(normalizeWord);
+  const userWordsRaw = userAnswer.trim().length ? userAnswer.trim().split(/\s+/) : [];
+  const userWordsNormalized = userWordsRaw.map(normalizeWord);
 
   let correctCount = 0;
   const diff: DictationWordDiff[] = refWords.map((word, i) => {
+    const userWord = userWordsRaw[i];
     const isCorrect =
       userWordsNormalized[i] !== undefined &&
       userWordsNormalized[i] === normalizeWord(word);
     if (isCorrect) correctCount++;
-    return {
-      word,
-      status: isCorrect ? "correct" : userWordsNormalized[i] ? "wrong" : "missing",
-    };
+    if (!isCorrect) {
+      return { word, status: userWord ? "wrong" : "missing", userWord };
+    }
+    // Đúng nội dung nhưng lệch chữ hoa/thường so với đáp án gốc — không bị trừ
+    // điểm (thuật toán chấm đã chuẩn hoá), chỉ đánh dấu để học viên tự sửa.
+    const isExactCase = stripPunctuation(userWord) === stripPunctuation(word);
+    return { word, status: isExactCase ? "correct" : "wrong-case", userWord };
   });
+
+  // Từ thừa học viên gõ nhiều hơn số từ của câu gốc — hiển thị để tham khảo,
+  // không tính vào tử số/mẫu số chấm điểm.
+  for (let i = refWords.length; i < userWordsRaw.length; i++) {
+    diff.push({ word: userWordsRaw[i], status: "extra", userWord: userWordsRaw[i] });
+  }
 
   const scorePct = Math.round((correctCount / (refWords.length || 1)) * 100);
   return {

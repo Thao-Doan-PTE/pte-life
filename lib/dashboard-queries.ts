@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { QUESTION_TYPES, getQuestionTypesBySkill, type Skill } from "@/lib/question-types";
+import {
+  QUESTION_TYPES,
+  getQuestionTypesBySkill,
+  getContributingSkills,
+  type Skill,
+} from "@/lib/question-types";
 import type { RecentAttempt, SkillProgress, DashboardOverview } from "@/lib/mock-dashboard";
 
 const SKILLS: Skill[] = ["speaking", "writing", "reading", "listening"];
@@ -64,7 +69,7 @@ export async function getQuestionCountsByType(typeIds: string[]): Promise<Record
 }
 
 export async function getSkillProgress(userId: string): Promise<SkillProgress[]> {
-  const [totalBySkill, practicedQuestions, attemptsByType] = await Promise.all([
+  const [totalBySkill, practicedQuestions, attemptsByType, scoredAttempts] = await Promise.all([
     prisma.question.groupBy({ by: ["skill"], _count: { skill: true } }),
     prisma.practiceAttempt.findMany({
       where: { userId },
@@ -76,7 +81,27 @@ export async function getSkillProgress(userId: string): Promise<SkillProgress[]>
       where: { userId },
       _count: { questionTypeId: true },
     }),
+    prisma.practiceAttempt.findMany({
+      where: { userId },
+      select: { questionTypeId: true, pteScore: true },
+    }),
   ]);
+
+  const typeById = new Map(QUESTION_TYPES.map((t) => [t.id, t]));
+
+  // Phân bổ điểm tích hợp: điểm của 1 lượt làm được cộng vào TẤT CẢ kỹ năng mà
+  // dạng bài đó đóng góp (VD: WFD cộng vào cả Listening và Writing), không chỉ
+  // riêng kỹ năng chính — đúng cơ chế chấm điểm PTE thật.
+  const scoreSumBySkill = new Map<Skill, number>();
+  const scoreCountBySkill = new Map<Skill, number>();
+  for (const attempt of scoredAttempts) {
+    const type = typeById.get(attempt.questionTypeId);
+    if (!type) continue;
+    for (const skill of getContributingSkills(type)) {
+      scoreSumBySkill.set(skill, (scoreSumBySkill.get(skill) ?? 0) + attempt.pteScore);
+      scoreCountBySkill.set(skill, (scoreCountBySkill.get(skill) ?? 0) + 1);
+    }
+  }
 
   const totalMap = new Map(totalBySkill.map((t) => [t.skill, t._count.skill]));
 
@@ -87,7 +112,6 @@ export async function getSkillProgress(userId: string): Promise<SkillProgress[]>
   }
 
   const typeCountMap = new Map(attemptsByType.map((a) => [a.questionTypeId, a._count.questionTypeId]));
-  const typeById = new Map(QUESTION_TYPES.map((t) => [t.id, t]));
 
   const topTypeBySkill = new Map<Skill, { id: string; name: string; count: number }>();
   for (const [typeId, count] of typeCountMap) {
@@ -105,6 +129,11 @@ export async function getSkillProgress(userId: string): Promise<SkillProgress[]>
     const progressPct = totalQuestions > 0 ? Math.round((practicedCount / totalQuestions) * 100) : 0;
     const top = topTypeBySkill.get(skill);
     const fallbackType = getQuestionTypesBySkill(skill)[0] ?? null;
+    const scoredAttemptCount = scoreCountBySkill.get(skill) ?? 0;
+    const avgPteScore =
+      scoredAttemptCount > 0
+        ? Math.round((scoreSumBySkill.get(skill) ?? 0) / scoredAttemptCount)
+        : null;
 
     return {
       skill,
@@ -116,6 +145,8 @@ export async function getSkillProgress(userId: string): Promise<SkillProgress[]>
         : fallbackType
           ? { id: fallbackType.id, name: fallbackType.name }
           : null,
+      avgPteScore,
+      scoredAttemptCount,
     };
   });
 }

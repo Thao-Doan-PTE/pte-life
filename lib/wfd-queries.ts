@@ -19,6 +19,15 @@ export async function getWfdPracticedSet(userId: string): Promise<Set<string>> {
   return new Set(attempts.map((a) => a.questionId));
 }
 
+/** Trả về Set các questionId mà user đã đánh dấu "Ưa thích" ở WFD. */
+export async function getWfdFavoriteSet(userId: string): Promise<Set<string>> {
+  const favorites = await prisma.favorite.findMany({
+    where: { userId, questionTypeId: WFD_TYPE_ID },
+    select: { questionId: true },
+  });
+  return new Set(favorites.map((f) => f.questionId));
+}
+
 export async function getStreakDays(userId: string): Promise<number> {
   const attempts = await prisma.practiceAttempt.findMany({
     where: { userId },

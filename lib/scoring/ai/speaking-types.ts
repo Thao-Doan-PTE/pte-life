@@ -29,6 +29,11 @@ export interface SpeakingGradeInput {
   durationSeconds: number;
   wordsPerMinute: number;
   fillerWordCount: number;
+  /** Số lần ngắt quãng và khoảng lặng dài nhất (ms), đo bằng phân tích biên độ âm
+   * thanh thời gian thực ở client (Web Audio API) — undefined nếu trình duyệt
+   * không hỗ trợ AudioContext, khi đó AI sẽ chỉ dựa vào WPM/filler như trước. */
+  pauseCount?: number;
+  longestPauseMs?: number;
   /** Văn bản/transcript gốc để so sánh nội dung (đoạn đọc, bài giảng, câu hỏi, tình huống...). */
   referenceText?: string;
   /** Chỉ dùng cho Describe Image — gửi kèm ảnh để AI đối chiếu nội dung mô tả. */

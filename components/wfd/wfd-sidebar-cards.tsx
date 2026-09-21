@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
 
 export function WfdBankCard({
@@ -28,17 +29,17 @@ export function WfdBankCard({
 /** Navy cố định của Pearson — không đổi theo theme sáng/tối, giống màu thương hiệu gốc. */
 const PEARSON_NAVY = "#14123D";
 
-export function WfdTipsCard({ tips }: { tips: string[] }) {
+export function WfdTipsCard({ tips, title = "Mẹo làm bài" }: { tips: ReactNode[]; title?: string }) {
   if (tips.length === 0) return null;
   return (
     <div className="rounded-2xl p-5" style={{ background: PEARSON_NAVY }}>
       <p className="text-sm font-bold" style={{ color: "#FFD600" }}>
-        Mẹo làm bài
+        {title}
       </p>
       <ul className="mt-2 flex flex-col gap-2">
-        {tips.map((t) => (
+        {tips.map((t, i) => (
           <li
-            key={t}
+            key={i}
             className="flex items-start gap-2 text-xs leading-relaxed"
             style={{ color: "#ffffff" }}
           >

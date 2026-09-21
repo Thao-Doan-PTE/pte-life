@@ -7,9 +7,20 @@
  * năng không bị gãy trong lúc chưa có Azure Speech resource.
  */
 
+import { PTE_VOICE_POOL } from "@/lib/azure-tts";
+
 export interface TtsResult {
   url: string;
   voiceName: string;
+}
+
+/** Chuyển tên giọng Azure (vd "en-AU-NatashaNeural") thành nhãn tiếng Việt
+ * dễ đọc (vd "Nữ (Australia)") để hiển thị cho học viên. */
+export function voiceLabel(voiceName: string | null): string {
+  if (!voiceName) return "Ngẫu nhiên";
+  const voice = PTE_VOICE_POOL.find((v) => v.name === voiceName);
+  if (!voice) return voiceName;
+  return `${voice.gender === "female" ? "Nữ" : "Nam"} (${voice.accent})`;
 }
 
 export async function fetchAzureTts(text: string, voiceName?: string): Promise<TtsResult | null> {
