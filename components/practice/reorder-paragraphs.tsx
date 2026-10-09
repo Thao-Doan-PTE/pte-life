@@ -29,7 +29,7 @@ export function ReorderParagraphs({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-muted-foreground">
+      <p className="text-[13px] text-muted-foreground">
         Dùng nút mũi tên để sắp xếp lại thứ tự đoạn văn cho đúng.
       </p>
       {order.map((p, i) => (
@@ -54,7 +54,7 @@ export function ReorderParagraphs({
               <ChevronDown className="size-3.5" />
             </Button>
           </div>
-          <p className="pt-1 text-sm">{p.text}</p>
+          <p className="font-passage pt-1 text-[17px] leading-relaxed">{p.text}</p>
         </div>
       ))}
     </div>

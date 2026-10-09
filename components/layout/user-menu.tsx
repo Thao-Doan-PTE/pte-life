@@ -42,7 +42,7 @@ export function UserMenu({
             <span className="text-sm font-medium">{name}</span>
             <Badge
               variant={examPackage === "academic" ? "default" : "outline"}
-              className="w-fit text-[10px] px-1.5 py-0"
+              className="w-fit text-xs px-1.5 py-0"
             >
               {packageLabel}
             </Badge>

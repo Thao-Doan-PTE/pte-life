@@ -27,7 +27,7 @@ function AnnotatedText({
   issues: WritingGradeResult["issues"];
 }) {
   if (issues.length === 0) {
-    return <p className="whitespace-pre-line text-sm">{text}</p>;
+    return <p className="whitespace-pre-line text-[15px]">{text}</p>;
   }
 
   // Tìm vị trí xuất hiện đầu tiên của mỗi "quote" trong bài làm để highlight,
@@ -58,7 +58,7 @@ function AnnotatedText({
   });
   parts.push(text.slice(cursor));
 
-  return <p className="whitespace-pre-line text-sm">{parts}</p>;
+  return <p className="whitespace-pre-line text-[15px]">{parts}</p>;
 }
 
 export function WritingReview({
@@ -76,28 +76,28 @@ export function WritingReview({
 
       {grade.issues.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">
+          <p className="text-[13px] font-semibold uppercase text-muted-foreground">
             Chi tiết lỗi
           </p>
           {grade.issues.map((issue, i) => (
-            <div key={i} className="rounded-lg border p-3 text-sm">
+            <div key={i} className="rounded-lg border p-3 text-[15px]">
               <p className="font-medium">{ISSUE_LABEL[issue.type]}</p>
               <p className="text-muted-foreground">
                 &ldquo;{issue.quote}&rdquo; → <span className="font-medium text-foreground">{issue.suggestion}</span>
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">{issue.explanation}</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">{issue.explanation}</p>
             </div>
           ))}
         </div>
       )}
 
       <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold uppercase text-muted-foreground">
+        <p className="text-[13px] font-semibold uppercase text-muted-foreground">
           Điểm theo tiêu chí
         </p>
         {Object.entries(grade.criteria).map(([key, c]) => (
           <div key={key} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-[15px]">
               <span className="font-medium">{CRITERION_LABELS[key] ?? key}</span>
               <span className="text-muted-foreground">{c.scorePct}%</span>
             </div>
@@ -107,12 +107,12 @@ export function WritingReview({
                 style={{ width: `${c.scorePct}%` }}
               />
             </div>
-            <p className="text-xs text-muted-foreground">{c.feedback}</p>
+            <p className="text-[13px] text-muted-foreground">{c.feedback}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl border bg-muted/40 p-4 text-sm">
+      <div className="rounded-xl border bg-muted/40 p-4 text-[15px]">
         <p className="mb-1 font-medium">Nhận xét chung</p>
         <p className="text-muted-foreground">{grade.generalFeedback}</p>
       </div>

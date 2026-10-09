@@ -4,14 +4,14 @@ export function QuestionContentPreview({ content }: { content: unknown }) {
 
   if (typeof c.question === "string" && Array.isArray(c.options)) {
     return (
-      <div className="flex flex-col gap-2 text-sm">
+      <div className="font-passage flex flex-col gap-2 text-[17px]">
         {typeof c.passage === "string" && (
           <p className="whitespace-pre-line text-muted-foreground">
             {c.passage}
           </p>
         )}
         {typeof c.audioUrl !== "undefined" && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             Câu hỏi dạng nghe — audio sẽ phát khi bắt đầu luyện tập.
           </p>
         )}
@@ -26,10 +26,10 @@ export function QuestionContentPreview({ content }: { content: unknown }) {
   }
   if (typeof c.prompt === "string") {
     return (
-      <div className="flex flex-col gap-2 text-sm">
+      <div className="font-passage flex flex-col gap-2 text-[17px]">
         <p>{c.prompt}</p>
         {typeof c.minWords === "number" && typeof c.maxWords === "number" && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             {c.minWords}–{c.maxWords} từ · {String(c.timeLimitMinutes)} phút
           </p>
         )}
@@ -37,7 +37,7 @@ export function QuestionContentPreview({ content }: { content: unknown }) {
     );
   }
   if (typeof c.situationText === "string") {
-    return <p className="text-sm">{c.situationText}</p>;
+    return <p className="font-passage text-[17px]">{c.situationText}</p>;
   }
   if (typeof c.imageUrl === "string") {
     return (
@@ -51,7 +51,7 @@ export function QuestionContentPreview({ content }: { content: unknown }) {
   }
   if (Array.isArray(c.paragraphs)) {
     return (
-      <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+      <ul className="flex flex-col gap-1.5 text-[15px] text-muted-foreground">
         {(c.paragraphs as { text: string }[]).map((p, i) => (
           <li key={i}>{p.text}</li>
         ))}
@@ -60,7 +60,7 @@ export function QuestionContentPreview({ content }: { content: unknown }) {
   }
   if (Array.isArray(c.segments)) {
     return (
-      <p className="whitespace-pre-line text-sm">
+      <p className="whitespace-pre-line text-[15px]">
         {(c.segments as { type: string; value?: string }[])
           .map((seg) => (seg.type === "text" ? seg.value : "___"))
           .join("")}
@@ -69,17 +69,17 @@ export function QuestionContentPreview({ content }: { content: unknown }) {
   }
   if (Array.isArray(c.words)) {
     return (
-      <p className="text-sm">
+      <p className="text-[15px]">
         {(c.words as string[]).join(" ")}
       </p>
     );
   }
   if (typeof c.passage === "string") {
-    return <p className="whitespace-pre-line text-sm">{c.passage}</p>;
+    return <p className="font-passage whitespace-pre-line text-[17px]">{c.passage}</p>;
   }
   if (typeof c.audioUrl !== "undefined") {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-[15px] text-muted-foreground">
         Câu hỏi dạng nghe — nội dung audio sẽ phát khi bắt đầu luyện tập.
       </p>
     );

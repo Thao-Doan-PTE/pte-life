@@ -35,35 +35,65 @@ export default async function MockTestResultPage({
     <AppShell>
       <div className="mx-auto flex max-w-2xl flex-col gap-6 px-5 py-10 sm:px-10">
         <div className="flex flex-col items-center gap-1 text-center">
-          <p className="text-sm font-medium text-primary">
+          <p className="text-[15px] font-medium text-primary">
             {mockTestSessionLabel(mockSession)}
           </p>
           <h1 className="text-2xl font-semibold">Kết quả Mocktest</h1>
         </div>
 
-        <Card>
-          <CardContent className="flex items-center justify-center gap-2 py-6">
-            <span
-              className={cn(
-                "text-4xl font-bold",
-                scoreColorClass(mockSession.scorePct ?? 0)
-              )}
-            >
-              {mockSession.scorePct ?? "-"}%
-            </span>
-            <span className="text-sm text-muted-foreground">điểm trung bình</span>
-          </CardContent>
-        </Card>
+        {mockSession.mode === "full" && mockSession.overallScore !== null ? (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-4 py-6">
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-bold text-primary">{mockSession.overallScore}</span>
+                <span className="text-[20px] text-muted-foreground">/ 90 GSE</span>
+              </div>
+              <p className="text-[13px] text-muted-foreground">
+                Điểm tổng theo chuẩn Pearson (GSE 10–90) — có trọng số theo từng dạng câu hỏi, không phải trung
+                bình cộng.
+              </p>
+              <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
+                {(
+                  [
+                    ["Listening", mockSession.listeningScore],
+                    ["Reading", mockSession.readingScore],
+                    ["Speaking", mockSession.speakingScore],
+                    ["Writing", mockSession.writingScore],
+                  ] as const
+                ).map(([label, score]) => (
+                  <div key={label} className="flex flex-col items-center gap-1 rounded-lg border bg-muted/40 py-3">
+                    <span className="text-2xl font-bold">{score ?? "-"}</span>
+                    <span className="text-[13px] text-muted-foreground">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="flex items-center justify-center gap-2 py-6">
+              <span
+                className={cn(
+                  "text-4xl font-bold",
+                  scoreColorClass(mockSession.scorePct ?? 0)
+                )}
+              >
+                {mockSession.scorePct ?? "-"}%
+              </span>
+              <span className="text-[15px] text-muted-foreground">điểm trung bình</span>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex flex-col divide-y rounded-xl border bg-card">
           {results.map((r, i) => (
             <Link
               key={r.questionId}
               href={`/practice/${mockSession.skill ?? ""}/${r.questionTypeId}/${r.questionId}`}
-              className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted"
+              className="flex items-center justify-between gap-3 px-4 py-3 text-[15px] transition-colors hover:bg-muted"
             >
               <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground">{i + 1}.</span>
+                <span className="text-[13px] text-muted-foreground">{i + 1}.</span>
                 <Badge variant="secondary" className="shrink-0">
                   {r.code}
                 </Badge>

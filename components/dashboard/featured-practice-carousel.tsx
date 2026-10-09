@@ -80,7 +80,7 @@ export function FeaturedPracticeCarousel({ counts }: { counts: Record<string, nu
                     Đề tủ · {type.skillLabel}
                   </p>
                   <div className="flex items-center gap-1.5">
-                    <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] font-bold text-muted-foreground">
+                    <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-bold text-muted-foreground">
                       {type.abbr}
                     </span>
                     <p className="truncate font-semibold">{type.name}</p>

@@ -39,12 +39,136 @@ async function seedUsers() {
       name: "Admin PTE-Life",
       email: "admin@ptelife.vn",
       passwordHash,
-      role: "admin",
+      roles: ["ADMIN"],
       examPackage: "academic",
       expiresAt: new Date("2030-12-31"),
       reservationsLeft: 0,
     },
   });
+}
+
+/** Demo data cho LMS giai đoạn 1 (mục 7): 1 ACADEMIC_LEAD, 2 TEACHER, 2 lớp,
+ * 10 học viên — dùng để nghiệm thu phân quyền Class/ClassTeacher/ClassEnrollment. */
+async function seedClasses() {
+  const passwordHash = await bcrypt.hash("pte123456", 10);
+
+  const lead = await prisma.user.upsert({
+    where: { email: "lead@ptelife.vn" },
+    update: {},
+    create: {
+      name: "Phạm Học Thuật",
+      email: "lead@ptelife.vn",
+      passwordHash,
+      roles: ["ACADEMIC_LEAD"],
+      examPackage: "academic",
+      expiresAt: new Date("2030-12-31"),
+      reservationsLeft: 0,
+    },
+  });
+
+  const teacher1 = await prisma.user.upsert({
+    where: { email: "teacher1@ptelife.vn" },
+    update: {},
+    create: {
+      name: "Lê Thu Giáo Viên",
+      email: "teacher1@ptelife.vn",
+      passwordHash,
+      roles: ["TEACHER"],
+      examPackage: "academic",
+      expiresAt: new Date("2030-12-31"),
+      reservationsLeft: 0,
+    },
+  });
+
+  const teacher2 = await prisma.user.upsert({
+    where: { email: "teacher2@ptelife.vn" },
+    update: {},
+    create: {
+      name: "Vũ Nam Giáo Viên",
+      email: "teacher2@ptelife.vn",
+      passwordHash,
+      roles: ["TEACHER"],
+      examPackage: "core",
+      expiresAt: new Date("2030-12-31"),
+      reservationsLeft: 0,
+    },
+  });
+
+  const students = await Promise.all(
+    Array.from({ length: 10 }, (_, i) => i + 1).map((n) =>
+      prisma.user.upsert({
+        where: { email: `hocvien.demo${n}@ptelife.vn` },
+        update: {},
+        create: {
+          name: `Học viên Demo ${n}`,
+          email: `hocvien.demo${n}@ptelife.vn`,
+          passwordHash,
+          roles: ["STUDENT"],
+          examPackage: n <= 5 ? "academic" : "core",
+          expiresAt: new Date("2026-12-31"),
+          reservationsLeft: 2,
+        },
+      })
+    )
+  );
+
+  const classA = await prisma.class.upsert({
+    where: { code: "PTEA-2610-01" },
+    update: {},
+    create: {
+      code: "PTEA-2610-01",
+      name: "PTE Academic 65+ — Tối 2-4-6",
+      examType: "academic",
+      targetScore: 65,
+      startDate: new Date("2026-10-05"),
+      endDate: new Date("2026-12-20"),
+      schedule: "T2-T4-T6 19:30–21:00",
+      status: "ACTIVE",
+      createdById: lead.id,
+    },
+  });
+
+  const classB = await prisma.class.upsert({
+    where: { code: "PTEC-2610-01" },
+    update: {},
+    create: {
+      code: "PTEC-2610-01",
+      name: "PTE Core 50+ — Sáng 3-5-7",
+      examType: "core",
+      targetScore: 50,
+      startDate: new Date("2026-10-06"),
+      endDate: new Date("2026-12-21"),
+      schedule: "T3-T5-T7 09:00–10:30",
+      status: "ACTIVE",
+      createdById: lead.id,
+    },
+  });
+
+  await prisma.classTeacher.upsert({
+    where: { classId_teacherId: { classId: classA.id, teacherId: teacher1.id } },
+    update: {},
+    create: { classId: classA.id, teacherId: teacher1.id, role: "MAIN" },
+  });
+  await prisma.classTeacher.upsert({
+    where: { classId_teacherId: { classId: classB.id, teacherId: teacher2.id } },
+    update: {},
+    create: { classId: classB.id, teacherId: teacher2.id, role: "MAIN" },
+  });
+
+  for (const student of students.slice(0, 5)) {
+    await prisma.classEnrollment.upsert({
+      where: { classId_studentId: { classId: classA.id, studentId: student.id } },
+      update: {},
+      create: { classId: classA.id, studentId: student.id },
+    });
+  }
+  for (const student of students.slice(5)) {
+    await prisma.classEnrollment.upsert({
+      where: { classId_studentId: { classId: classB.id, studentId: student.id } },
+      update: {},
+      create: { classId: classB.id, studentId: student.id },
+    });
+  }
 }
 
 async function seedQuestions() {
@@ -376,6 +500,7 @@ async function seedQuestions() {
 async function main() {
   await seedUsers();
   await seedQuestions();
+  await seedClasses();
 }
 
 main()

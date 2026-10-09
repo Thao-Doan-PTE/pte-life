@@ -19,15 +19,50 @@ enum Skill {
   listening
 }
 
-enum UserRole {
-  student
-  admin
+enum Role {
+  ADMIN
+  OPS
+  ACADEMIC_LEAD
+  TEACHER
+  STUDENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ClassStatus {
+  UPCOMING
+  ACTIVE
+  FINISHED
+  ARCHIVED
+}
+
+enum ClassTeacherRole {
+  MAIN
+  ASSISTANT
+}
+
+enum ClassEnrollmentStatus {
+  ACTIVE
+  PAUSED
+  LEFT
 }
 
 enum MockTestMode {
   question
   section
   full
+  tu
+}
+
+/// Ngân hàng câu hỏi: PTE = luyện đề theo cấu trúc thi thật (22 dạng theo
+/// questionTypeId); TU = bộ câu hỏi "Tủ" riêng, hiện chỉ tập trung 2 dạng
+/// khó đoán trước đề (WFD, RS) để học viên luyện trọng tâm.
+enum QuestionBank {
+  PTE
+  TU
 }
 
 enum MockTestStatus {
@@ -40,7 +75,8 @@ model User {
   name             String
   email            String      @unique
   passwordHash     String
-  role             UserRole    @default(student)
+  roles            Role[]      @default([STUDENT])
+  status           UserStatus  @default(ACTIVE)
   examPackage      ExamPackage
   expiresAt        DateTime
   reservationsLeft Int         @default(2)
@@ -49,10 +85,87 @@ model User {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  attempts         PracticeAttempt[]
-  mockTestSessions MockTestSession[]
-  reservationLogs  ReservationLog[] @relation("ReservationLogsForUser")
-  favorites        Favorite[]
+  attempts             PracticeAttempt[]
+  mockTestSessions     MockTestSession[]
+  reservationLogs      ReservationLog[]      @relation("ReservationLogsForUser")
+  favorites            Favorite[]
+  savedWords           SavedWord[]
+  createdClasses       Class[]               @relation("ClassCreatedBy")
+  teachingClasses      ClassTeacher[]
+  classEnrollments     ClassEnrollment[]
+  auditLogs            AuditLog[]
+  entryTestAttempts    EntryTestAttempt[]    @relation("EntryTestAttemptsForUser")
+  consultationRequests ConsultationRequest[]
+  entryTestGraded      EntryTestAttempt[]    @relation("EntryTestAttemptsGradedBy")
+}
+
+/// Lớp học — Bước LMS giai đoạn 1. examType dùng lại enum ExamPackage có sẵn
+/// (không tạo enum trùng) vì cùng ý nghĩa PTE Academic/PTE Core.
+model Class {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  examType    ExamPackage
+  targetScore Int?
+  startDate   DateTime?
+  endDate     DateTime?
+  schedule    String?
+  meetingUrl  String?
+  status      ClassStatus @default(UPCOMING)
+  createdById String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  createdBy   User              @relation("ClassCreatedBy", fields: [createdById], references: [id])
+  teachers    ClassTeacher[]
+  enrollments ClassEnrollment[]
+}
+
+model ClassTeacher {
+  id        String           @id @default(cuid())
+  classId   String
+  teacherId String
+  role      ClassTeacherRole @default(MAIN)
+  createdAt DateTime         @default(now())
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, teacherId])
+  @@index([teacherId])
+}
+
+model ClassEnrollment {
+  id        String                @id @default(cuid())
+  classId   String
+  studentId String
+  status    ClassEnrollmentStatus @default(ACTIVE)
+  joinedAt  DateTime              @default(now())
+  leftAt    DateTime?
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId])
+  @@index([studentId])
+}
+
+/// Audit log tổng quát cho các thao tác LMS (Class/ClassTeacher/ClassEnrollment
+/// trở đi) — tách riêng khỏi ReservationLog hiện có (ReservationLog chỉ dành
+/// cho đổi gói/gia hạn/bảo lưu, giữ nguyên không đụng tới). Xem docs/LMS_DECISIONS.md.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId])
+  @@index([entityType, entityId])
 }
 
 /// Log các lần admin/CSKH gán gói, gia hạn, hoặc dùng lượt bảo lưu cho học viên (Bước 11).
@@ -73,16 +186,26 @@ model ReservationLog {
 /// Không lưu điểm từng câu ở đây — điểm lấy lại từ PracticeAttempt mới nhất của
 /// mỗi câu trong questionIds khi tính kết quả, tránh trùng lặp dữ liệu chấm điểm.
 model MockTestSession {
-  id             String          @id @default(cuid())
+  id             String         @id @default(cuid())
   userId         String
   mode           MockTestMode
   skill          Skill?
   questionTypeId String?
   questionIds    String[]
-  currentIndex   Int             @default(0)
-  status         MockTestStatus  @default(in_progress)
+  currentIndex   Int            @default(0)
+  status         MockTestStatus @default(in_progress)
   scorePct       Int?
-  startedAt      DateTime        @default(now())
+  /// Điểm GSE (10-90) theo đúng chuẩn Pearson — chỉ tính cho mode "full" (xem
+  /// lib/gse-scoring.ts). Không phải trung bình cộng scorePct mà là tỷ lệ điểm
+  /// đạt/tối đa có trọng số theo overallWeightPct và weighting[skill] của từng
+  /// dạng câu hỏi (Integrated Skills Routing — 1 câu có thể cộng điểm vào nhiều
+  /// kỹ năng, ví dụ WFD cộng cả Listening lẫn Writing).
+  overallScore   Int?
+  listeningScore Int?
+  readingScore   Int?
+  speakingScore  Int?
+  writingScore   Int?
+  startedAt      DateTime       @default(now())
   completedAt    DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -99,6 +222,7 @@ model Question {
   skill          Skill
   code           String        @unique
   availableIn    ExamPackage[]
+  bank           QuestionBank  @default(PTE)
   content        Json
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -107,6 +231,7 @@ model Question {
   favorites Favorite[]
 
   @@index([questionTypeId])
+  @@index([bank])
 }
 
 /// Kết quả 1 lượt làm bài, gắn với learner + question. Chấm rule-based (Bước 6)
@@ -143,4 +268,128 @@ model Favorite {
 
   @@unique([userId, questionId])
   @@index([userId, questionTypeId])
+}
+
+/// Từ vựng học viên lưu lại khi chạm vào từ trong đoạn văn để tra nghĩa nhanh —
+/// hiện lại ở trang "Sổ từ vựng".
+model SavedWord {
+  id        String   @id @default(cuid())
+  userId    String
+  word      String
+  phonetic  String?
+  meaningVi String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, word])
+  @@index([userId])
+}
+
+enum EntryTestPurpose {
+  DU_HOC
+  DINH_CU
+  XIN_VIEC
+  KHAC
+}
+
+/// Lead thu được từ form "Test đầu vào" ở trang chủ LMS — khách/học viên mới
+/// chưa chắc đã có tài khoản (userId để trống ở bước thu lead). Việc thật sự
+/// làm bài test và gắn kết quả sẽ làm ở Phase 2 (xem docs/LMS_DECISIONS.md).
+model EntryTestLead {
+  id           String           @id @default(cuid())
+  name         String
+  phone        String
+  email        String?
+  targetScore  String
+  purpose      EntryTestPurpose
+  examTimeline String
+  consentAt    DateTime
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  createdAt    DateTime         @default(now())
+
+  @@index([createdAt])
+}
+
+enum EntryTestAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+}
+
+/// 1 lượt làm "Test đầu vào" thật của học viên đã có tài khoản (Phase 2, xem
+/// docs/LMS_DECISIONS.md). Khác với EntryTestLead (chỉ thu thông tin liên hệ
+/// của khách/học viên mới chưa chắc có tài khoản) — model này gắn với User
+/// thật, lưu toàn bộ bài làm để giáo viên chấm Speaking/Listening (nội dung
+/// hiện tại chưa có đáp án Listening, xem lib/entry-test-data.ts) và theo dõi
+/// tiến trình chấm. Câu hỏi/đáp án của đề cố định được lưu tĩnh trong code
+/// (lib/entry-test-data.ts), không tạo bảng Question riêng, vì đây là 1 đề
+/// cố định (26 câu) chưa được học thuật duyệt, không phải ngân hàng câu hỏi
+/// mở rộng như PracticeAttempt/Question.
+model EntryTestAttempt {
+  id            String                 @id @default(cuid())
+  userId        String
+  startedAt     DateTime               @default(now())
+  submittedAt   DateTime?
+  autoSubmitted Boolean                @default(false)
+  scoreAuto     Int?
+  scoreSpeaking Int?
+  scoreTotal    Int?
+  level         String?
+  status        EntryTestAttemptStatus @default(IN_PROGRESS)
+  gradedById    String?
+  gradedAt      DateTime?
+
+  user     User              @relation("EntryTestAttemptsForUser", fields: [userId], references: [id], onDelete: Cascade)
+  gradedBy User?             @relation("EntryTestAttemptsGradedBy", fields: [gradedById], references: [id])
+  answers  EntryTestAnswer[]
+
+  @@index([userId])
+}
+
+/// 1 câu trả lời trong 1 lượt làm — questionId khớp id tĩnh trong
+/// lib/entry-test-data.ts (vd. "S1", "W1".."W10", "R1".."R5", "L1".."L10").
+model EntryTestAnswer {
+  id            String   @id @default(cuid())
+  attemptId     String
+  questionId    String
+  responseText  String?
+  audioUrl      String?
+  isCorrect     Boolean?
+  pointsAwarded Int?
+  feedback      String?
+  createdAt     DateTime @default(now())
+
+  attempt EntryTestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+}
+
+enum ConsultationStatus {
+  NEW
+  CONTACTED
+  DONE
+}
+
+/// Yêu cầu đặt lịch tư vấn lộ trình của học viên (sau khi làm Test đầu vào):
+/// học viên chọn ngày + khung giờ muốn được tư vấn viên liên hệ.
+model ConsultationRequest {
+  id            String             @id @default(cuid())
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  phone         String
+  email         String?
+  preferredDate DateTime
+  timeSlot      String
+  note          String?
+  /// "consult" = tư vấn lộ trình, "trial" = đăng ký học thử miễn phí
+  topic         String             @default("consult")
+  status        ConsultationStatus @default(NEW)
+  createdAt     DateTime           @default(now())
+
+  @@index([userId])
+  @@index([status, createdAt])
 }

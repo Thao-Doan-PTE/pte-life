@@ -1,22 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth-helpers";
 import type { ExamPackage } from "@/lib/question-types";
 
+/** Giữ tên cũ để không phải sửa mọi chỗ đang gọi — wrapper mỏng gọi requireRole. */
 export async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "admin") {
-    throw new Error("Bạn không có quyền thực hiện thao tác này.");
-  }
-  return session.user;
+  return requireRole(["ADMIN"]);
 }
 
 export async function getAllUsersForAdmin() {
   await requireAdmin();
   return prisma.user.findMany({
-    where: { role: "student" },
+    where: { roles: { has: "STUDENT" } },
     orderBy: { createdAt: "desc" },
   });
 }

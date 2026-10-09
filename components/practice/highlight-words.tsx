@@ -21,7 +21,7 @@ export function HighlightWords({
   };
 
   return (
-    <p className="rounded-xl border bg-card p-4 text-base leading-loose">
+    <p className="font-passage rounded-xl border bg-card p-4 text-[17px] leading-[1.8]">
       {words.map((w, i) => (
         <span
           key={i}

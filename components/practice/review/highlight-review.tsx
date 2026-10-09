@@ -14,7 +14,7 @@ export function HighlightReview({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="rounded-xl border bg-card p-4 text-base leading-loose">
+      <p className="rounded-xl border bg-card p-4 text-[15px] leading-loose">
         {words.map((w, i) => {
           const shouldPick = incorrectSet.has(i);
           const picked = selectedSet.has(i);
@@ -39,7 +39,7 @@ export function HighlightReview({
           );
         })}
       </p>
-      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-3 text-[13px] text-muted-foreground">
         <span className="text-emerald-700 dark:text-emerald-400">
           ■ Bạn chọn đúng
         </span>

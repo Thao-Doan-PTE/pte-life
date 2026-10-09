@@ -28,8 +28,8 @@ export function PracticeNavFooter({
         {prevHref ? (
           <Link
             href={prevHref}
-            className="flex items-center gap-1.5 rounded-[10px] border px-4 py-2 text-sm font-semibold"
-            style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
+            className="flex items-center gap-1.5 rounded-lg border px-4 py-2 text-[15px] font-semibold transition-colors hover:bg-[var(--wfd-bg)]"
+            style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-muted)", background: "var(--wfd-surface)" }}
           >
             <ArrowLeft className="size-4" /> Câu trước
           </Link>
@@ -39,18 +39,18 @@ export function PracticeNavFooter({
         <button
           type="button"
           onClick={() => setResetKey((k) => k + 1)}
-          className="flex items-center gap-1.5 rounded-[10px] border px-4 py-2 text-sm font-semibold"
-          style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
+          className="flex items-center gap-1.5 rounded-lg border px-4 py-2 text-[15px] font-semibold transition-colors hover:bg-[var(--wfd-bg)]"
+          style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-muted)", background: "var(--wfd-surface)" }}
         >
           <RotateCcw className="size-4" /> Thử lại
         </button>
         {nextHref ? (
           <Link
             href={nextHref}
-            className="flex items-center gap-1.5 rounded-[10px] px-4 py-2 text-sm font-bold text-white"
-            style={{ background: "var(--wfd-red)" }}
+            className="flex items-center gap-1.5 rounded-lg border px-4 py-2 text-[15px] font-semibold transition-colors hover:bg-[var(--wfd-bg)]"
+            style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-muted)", background: "var(--wfd-surface)" }}
           >
-            Câu tiếp <ArrowRight className="size-4" />
+            Câu tiếp theo <ArrowRight className="size-4" />
           </Link>
         ) : (
           <span />

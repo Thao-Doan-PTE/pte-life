@@ -25,11 +25,26 @@ export function QuestionImportForm({ questionTypeId }: { questionTypeId: string 
   const [csvText, setCsvText] = useState("");
   const [fileName, setFileName] = useState("");
   const [readError, setReadError] = useState<string | null>(null);
+  const [bank, setBank] = useState<"PTE" | "TU">("PTE");
 
   return (
     <form action={formAction} className="flex flex-col gap-3 rounded-xl border bg-muted/40 p-4">
       <input type="hidden" name="questionTypeId" value={questionTypeId} />
       <input type="hidden" name="csvContent" value={csvText} />
+      <input type="hidden" name="bank" value={bank} />
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Ngân hàng:</span>
+          <select
+            value={bank}
+            onChange={(e) => setBank(e.target.value as "PTE" | "TU")}
+            className="rounded-md border bg-background px-2 py-1 text-sm"
+          >
+            <option value="PTE">Luyện đề PTE</option>
+            <option value="TU">Luyện đề Tủ</option>
+          </select>
+        </label>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="file"

@@ -32,7 +32,7 @@ export default async function HistoryDetailPage({
       <div className="mx-auto flex max-w-2xl flex-col gap-6 px-5 py-6 sm:px-10">
         <Link
           href="/history"
-          className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="flex w-fit items-center gap-1 text-[15px] text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" /> Lịch sử luyện tập
         </Link>
@@ -41,11 +41,11 @@ export default async function HistoryDetailPage({
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{attempt.question.code}</Badge>
             <Badge variant="outline">{type?.name ?? attempt.questionTypeId}</Badge>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[13px] text-muted-foreground">
               {SKILL_LABELS[attempt.question.skill]}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             Làm lúc {formatRelativeOrDate(attempt.createdAt.toISOString())}
           </p>
         </div>

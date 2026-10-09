@@ -23,7 +23,7 @@ export function ListeningChoicePlayer({
   options: string[];
   maxSelectable?: number;
 }) {
-  const [hasPlayed, setHasPlayed] = useState(false);
+  const [, setHasPlayed] = useState(false);
   const [selected, setSelected] = useState<number[] | null>(null);
   const [result, setResult] = useState<ScoreResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function ListeningChoicePlayer({
   if (result && selected) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="font-medium">{question}</p>
+        <p className="font-passage text-[17px] font-medium">{question}</p>
         <ChoiceReview
           options={options}
           selected={selected}
@@ -64,15 +64,13 @@ export function ListeningChoicePlayer({
   return (
     <div className="flex flex-col gap-4">
       <SingleAudioPlayer audioUrl={audioUrl} onEnded={() => setHasPlayed(true)} />
-      {hasPlayed && (
-        <ChoiceQuestion
-          question={question}
-          options={options}
-          maxSelectable={maxSelectable}
-          onSubmit={handleSubmit}
-        />
-      )}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <ChoiceQuestion
+        question={question}
+        options={options}
+        maxSelectable={maxSelectable}
+        onSubmit={handleSubmit}
+      />
+      {error && <p className="text-[15px] text-destructive">{error}</p>}
     </div>
   );
 }

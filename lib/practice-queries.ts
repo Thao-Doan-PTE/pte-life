@@ -1,17 +1,19 @@
 import { prisma } from "@/lib/prisma";
+import type { QuestionBank } from "@/lib/generated/prisma/client";
 
-export function getQuestionsForType(questionTypeId: string) {
+export function getQuestionsForType(questionTypeId: string, bank?: QuestionBank) {
   return prisma.question.findMany({
-    where: { questionTypeId },
+    where: { questionTypeId, ...(bank ? { bank } : {}) },
     orderBy: { code: "asc" },
   });
 }
 
 export async function getQuestionWithSiblings(
   questionTypeId: string,
-  questionId: string
+  questionId: string,
+  bank?: QuestionBank
 ) {
-  const all = await getQuestionsForType(questionTypeId);
+  const all = await getQuestionsForType(questionTypeId, bank);
   const index = all.findIndex((q) => q.id === questionId);
   return { question: index >= 0 ? all[index] : null, all, index };
 }

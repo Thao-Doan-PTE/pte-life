@@ -26,7 +26,7 @@ export function DropdownBlanks({
   };
 
   return (
-    <p className="whitespace-pre-line rounded-xl border bg-card p-4 text-base leading-loose">
+    <p className="font-passage whitespace-pre-line rounded-xl border bg-card p-4 text-[17px] leading-[1.8]">
       {segments.map((seg, i) =>
         seg.type === "text" ? (
           <span key={i}>{seg.value}</span>
@@ -35,7 +35,7 @@ export function DropdownBlanks({
             key={i}
             value={answers[seg.id!] ?? ""}
             onChange={(e) => setAnswer(seg.id!, e.target.value)}
-            className="mx-1 rounded-md border border-input bg-background px-2 py-0.5 text-sm"
+            className="mx-1 rounded-md border border-input bg-background px-2 py-0.5 text-[15px]"
           >
             <option value="" disabled>
               chọn...

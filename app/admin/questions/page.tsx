@@ -8,24 +8,26 @@ import { QuestionBulkList } from "@/components/admin/question-bulk-list";
 import { getQuestionCounts, getQuestionsForTypeAdmin } from "@/lib/actions/admin-questions";
 import { QUESTION_IMPORT_SCHEMAS } from "@/lib/question-import/schemas";
 import { SKILL_LABELS, type Skill } from "@/lib/question-types";
+import { isAdmin } from "@/lib/auth-helpers";
 
 const SKILL_ORDER: Skill[] = ["speaking", "writing", "reading", "listening"];
 
 export default async function AdminQuestionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; bank?: string }>;
 }) {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user || !isAdmin(session.user)) {
     redirect("/");
   }
 
   const counts = await getQuestionCounts();
-  const { type } = await searchParams;
+  const { type, bank } = await searchParams;
   const selectedType = type && QUESTION_IMPORT_SCHEMAS[type] ? type : counts[0]?.questionTypeId;
+  const selectedBank = bank === "PTE" || bank === "TU" ? bank : undefined;
   const schema = selectedType ? QUESTION_IMPORT_SCHEMAS[selectedType] : null;
-  const questions = selectedType ? await getQuestionsForTypeAdmin(selectedType) : [];
+  const questions = selectedType ? await getQuestionsForTypeAdmin(selectedType, selectedBank) : [];
 
   return (
     <AppShell>
@@ -76,6 +78,24 @@ export default async function AdminQuestionsPage({
               </a>
             </div>
 
+            <div className="flex items-center gap-1 text-sm">
+              {([
+                { value: undefined, label: "Tất cả" },
+                { value: "PTE", label: "Luyện đề PTE" },
+                { value: "TU", label: "Luyện đề Tủ" },
+              ] as const).map((opt) => (
+                <Link
+                  key={opt.label}
+                  href={`/admin/questions?type=${selectedType}${opt.value ? `&bank=${opt.value}` : ""}`}
+                  className={`rounded-md px-2.5 py-1 ${
+                    selectedBank === opt.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {opt.label}
+                </Link>
+              ))}
+            </div>
+
             {schema.notes && (
               <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
                 {schema.notes}
@@ -91,6 +111,7 @@ export default async function AdminQuestionsPage({
                   id: q.id,
                   code: q.code,
                   availableIn: q.availableIn,
+                  bank: q.bank,
                   createdAt: q.createdAt.toISOString(),
                 }))}
                 questionTypeId={selectedType}

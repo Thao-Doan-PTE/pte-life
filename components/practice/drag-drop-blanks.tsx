@@ -37,7 +37,7 @@ export function DragDropBlanks({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-2 rounded-xl border bg-muted/40 p-3">
         {availableWords.length === 0 && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             Đã dùng hết từ trong ngân hàng từ.
           </p>
         )}
@@ -49,7 +49,7 @@ export function DragDropBlanks({
             onDragStart={(e) => e.dataTransfer.setData("text/plain", w)}
             onClick={() => setSelectedWord((prev) => (prev === w ? null : w))}
             className={cn(
-              "cursor-grab rounded-md border bg-card px-2.5 py-1 text-sm active:cursor-grabbing",
+              "cursor-grab rounded-md border bg-card px-2.5 py-1 text-[15px] active:cursor-grabbing",
               selectedWord === w && "border-primary bg-primary/10"
             )}
           >
@@ -58,7 +58,7 @@ export function DragDropBlanks({
         ))}
       </div>
 
-      <p className="whitespace-pre-line rounded-xl border bg-card p-4 text-base leading-loose">
+      <p className="font-passage whitespace-pre-line rounded-xl border bg-card p-4 text-[17px] leading-[1.8]">
         {segments.map((seg, i) =>
           seg.type === "text" ? (
             <span key={i}>{seg.value}</span>
@@ -76,7 +76,7 @@ export function DragDropBlanks({
                 else if (selectedWord) placeWord(seg.id!, selectedWord);
               }}
               className={cn(
-                "mx-1 inline-flex min-w-[72px] cursor-pointer items-center justify-center rounded-md border border-dashed px-2 py-0.5 text-sm",
+                "mx-1 inline-flex min-w-[72px] cursor-pointer items-center justify-center rounded-md border border-dashed px-2 py-0.5 text-[15px]",
                 answers[seg.id!]
                   ? "border-primary bg-primary/5"
                   : "border-muted-foreground/40 text-muted-foreground"
@@ -87,7 +87,7 @@ export function DragDropBlanks({
           )
         )}
       </p>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-[13px] text-muted-foreground">
         Kéo thả từ trong khung phía trên vào chỗ trống, hoặc bấm chọn 1 từ rồi
         bấm vào chỗ trống muốn điền.
       </p>

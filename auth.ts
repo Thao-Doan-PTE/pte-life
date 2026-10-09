@@ -36,7 +36,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          roles: user.roles,
           examPackage: user.examPackage,
           expiresAt: user.expiresAt.toISOString(),
           reservationsLeft: user.reservationsLeft,
@@ -45,18 +45,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
+        token.roles = user.roles;
         token.examPackage = user.examPackage;
         token.expiresAt = user.expiresAt;
         token.reservationsLeft = user.reservationsLeft;
+        return token;
       }
-      return token;
+      // Tài khoản đã bị xoá khỏi DB nhưng JWT còn hạn: trả null để phiên bị
+      // huỷ và người dùng quay về trạng thái khách thay vì làm các trang lỗi 500.
+      const stillExists = token.sub
+        ? await prisma.user.findUnique({ where: { id: token.sub }, select: { id: true } })
+        : null;
+      return stillExists ? token : null;
     },
     session({ session, token }) {
       session.user.id = token.sub!;
-      session.user.role = token.role;
+      session.user.roles = token.roles;
       session.user.examPackage = token.examPackage;
       session.user.expiresAt = token.expiresAt;
       session.user.reservationsLeft = token.reservationsLeft;

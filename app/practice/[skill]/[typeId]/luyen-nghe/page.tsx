@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { WfdShell } from "@/components/wfd/wfd-shell";
 import { WfdListenPractice } from "@/components/wfd/wfd-listen-practice";
 import { getQuestionsForType } from "@/lib/practice-queries";
-import type { Skill } from "@/lib/question-types";
+import { QUESTION_TYPES, type Skill } from "@/lib/question-types";
 
 const VALID_SKILLS: Skill[] = ["speaking", "writing", "reading", "listening"];
 
@@ -27,12 +27,17 @@ export default async function WfdListenPracticePage({
   }
 
   const questions = await getQuestionsForType(typeId);
+  const questionType = QUESTION_TYPES.find((t) => t.id === typeId);
+  const typeName = questionType?.name ?? typeId;
+  const typeCode = questionType?.code ?? "";
 
   return (
     <AppShell>
       <WfdShell>
         <WfdListenPractice
           backHref={`/practice/${skill}/${typeId}`}
+          typeName={typeName}
+          typeCode={typeCode}
           questions={questions.map((q) => {
             const content = q.content as Record<string, unknown>;
             return {

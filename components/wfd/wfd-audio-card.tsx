@@ -1,19 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Play, RotateCcw, TriangleAlert } from "lucide-react";
+import { Play, RotateCcw, Volume2, VolumeX, TriangleAlert, SlidersHorizontal } from "lucide-react";
 import { fetchAzureTts, isBrowserTtsSupported, speakWithBrowserTts, voiceLabel } from "@/lib/wfd-tts-client";
 import { PTE_VOICE_POOL } from "@/lib/azure-tts";
 
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5];
-
-function pickerStyle() {
-  return {
-    background: "transparent",
-    color: "var(--wfd-muted)",
-    border: "none",
-  } as const;
-}
 
 function estimateDurationSec(text: string): number {
   const words = text.trim().split(/\s+/).length;
@@ -41,9 +33,12 @@ export function WfdAudioCard({
   const [voiceName, setVoiceName] = useState<string | null>(null);
   const [voiceOverride, setVoiceOverride] = useState<string | null>("en-AU-NatashaNeural");
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(0);
+  const optionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     return () => {
@@ -53,7 +48,19 @@ export function WfdAudioCard({
     };
   }, []);
 
+  useEffect(() => {
+    if (!optionsOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
+        setOptionsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [optionsOpen]);
+
   const resolvedVoiceRef = useRef<string | null>(null);
+  const handlePlayRef = useRef<() => void>(() => {});
 
   const handlePlay = async () => {
     if (isPlaying) return;
@@ -70,6 +77,7 @@ export function WfdAudioCard({
       setVoiceName(azure.voiceName);
       const audio = new Audio(azure.url);
       audio.playbackRate = playbackRate;
+      audio.muted = muted;
       audioRef.current = audio;
       audio.onloadedmetadata = () => setDuration(audio.duration || estimateDurationSec(sentence));
       audio.ontimeupdate = () => setElapsed(audio.currentTime);
@@ -115,90 +123,144 @@ export function WfdAudioCard({
     );
   };
 
-  const progressRatio = duration > 0 ? elapsed / duration : 0;
+  useEffect(() => {
+    handlePlayRef.current = handlePlay;
+  });
+
+  // Phím tắt Space = phát/nghe lại câu — bỏ qua khi học viên đang gõ trong ô
+  // nhập/textarea/select khác trên trang, tránh chặn thao tác gõ chữ bình thường.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.code !== "Space") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) {
+        return;
+      }
+      e.preventDefault();
+      handlePlayRef.current();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleMuteToggle = () => {
+    const next = !muted;
+    setMuted(next);
+    if (audioRef.current) audioRef.current.muted = next;
+  };
+
+  const stateLabel = isPlaying ? "Đang phát" : hasPlayed ? "Nghe lại" : "Phát";
 
   return (
-    <div
-      className="rounded-2xl border p-5"
-      style={{ background: "var(--wfd-surface)", borderColor: "var(--wfd-border)" }}
-    >
-      <div className="mb-3 flex items-center justify-between gap-2 text-xs" style={{ color: "var(--wfd-muted)" }}>
-        <label className="flex items-center gap-1">
-          Giọng đọc:
-          <select
-            className="wfd-mono cursor-pointer appearance-none bg-transparent font-semibold underline decoration-dotted"
-            style={pickerStyle()}
-            value={voiceOverride ?? ""}
-            onChange={(e) => setVoiceOverride(e.target.value || null)}
-            disabled={isPlaying}
-          >
-            <option value="">{voiceLabel(null)}</option>
-            {PTE_VOICE_POOL.map((v) => (
-              <option key={v.name} value={v.name}>
-                {voiceLabel(v.name)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-1">
-          Tốc độ:
-          <select
-            className="wfd-mono cursor-pointer appearance-none bg-transparent font-semibold underline decoration-dotted"
-            style={pickerStyle()}
-            value={playbackRate}
-            onChange={(e) => setPlaybackRate(Number(e.target.value))}
-            disabled={isPlaying}
-          >
-            {SPEED_OPTIONS.map((r) => (
-              <option key={r} value={r}>
-                {r.toFixed(2)}x
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="flex shrink-0 flex-col items-center gap-1">
+    <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handlePlay}
+          disabled={isPlaying || unsupported}
+          className="flex size-10 shrink-0 items-center justify-center rounded-full text-white disabled:opacity-60"
+          style={{ background: "var(--wfd-red)" }}
+        >
+          {hasPlayed ? (
+            <RotateCcw className="size-4" />
+          ) : (
+            <Play className="size-4 translate-x-[1px]" fill="currentColor" />
+          )}
+        </button>
+
+        <input
+          type="range"
+          disabled
+          min={0}
+          max={duration || 0}
+          step={0.1}
+          value={elapsed}
+          className="h-1.5 min-w-[36px] flex-1 accent-[var(--wfd-red)]"
+        />
+
+        <span className="wfd-mono shrink-0 text-[13px] font-semibold" style={{ color: "var(--wfd-muted)" }}>
+          {formatTime(elapsed)} / {formatTime(duration)}
+        </span>
+
+        <button
+          type="button"
+          onClick={handleMuteToggle}
+          className="flex shrink-0 items-center rounded-full border px-2 py-1"
+          style={{ borderColor: "var(--wfd-border)" }}
+        >
+          {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+        </button>
+
+        <div ref={optionsRef} className="relative shrink-0">
           <button
             type="button"
-            onClick={handlePlay}
-            disabled={isPlaying || unsupported}
-            className="flex size-10 items-center justify-center rounded-full text-white disabled:opacity-60"
-            style={{ background: "var(--wfd-red)" }}
+            onClick={() => setOptionsOpen((v) => !v)}
+            className="flex items-center rounded-full border px-2 py-1"
+            style={{
+              borderColor: optionsOpen ? "var(--wfd-red)" : "var(--wfd-border)",
+              color: optionsOpen ? "var(--wfd-red)" : "var(--wfd-muted)",
+            }}
           >
-            {hasPlayed ? (
-              <RotateCcw className="size-4" />
-            ) : (
-              <Play className="size-4 translate-x-[1px]" fill="currentColor" />
-            )}
+            <SlidersHorizontal className="size-3.5" />
           </button>
-          <span className="text-[11px] font-bold" style={{ color: "var(--wfd-red-dark)" }}>
-            {isPlaying ? "Đang phát" : hasPlayed ? "Nghe lại" : "Phát"}
-          </span>
-          {!voiceOverride && voiceName && (
-            <span className="wfd-mono text-[10px]" style={{ color: "var(--wfd-muted-2)" }}>
-              {voiceLabel(voiceName)}
-            </span>
+
+          {optionsOpen && (
+            <div
+              className="absolute top-full right-0 z-10 mt-2 flex w-56 flex-col gap-3 rounded-xl border p-3 shadow-lg"
+              style={{ background: "var(--wfd-surface)", borderColor: "var(--wfd-border)" }}
+            >
+              <label className="flex flex-col gap-1 text-[13px] font-semibold" style={{ color: "var(--wfd-muted)" }}>
+                Tốc độ
+                <select
+                  className="wfd-mono rounded-lg border px-2 py-1.5 font-semibold"
+                  style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)", background: "var(--wfd-surface)" }}
+                  value={playbackRate}
+                  onChange={(e) => setPlaybackRate(Number(e.target.value))}
+                  disabled={isPlaying}
+                >
+                  {SPEED_OPTIONS.map((r) => (
+                    <option key={r} value={r}>
+                      X{r.toFixed(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-[13px] font-semibold" style={{ color: "var(--wfd-muted)" }}>
+                Giọng đọc
+                <select
+                  className="wfd-mono rounded-lg border px-2 py-1.5 font-semibold"
+                  style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)", background: "var(--wfd-surface)" }}
+                  value={voiceOverride ?? ""}
+                  onChange={(e) => setVoiceOverride(e.target.value || null)}
+                  disabled={isPlaying}
+                >
+                  <option value="">{voiceLabel(null)}</option>
+                  {PTE_VOICE_POOL.map((v) => (
+                    <option key={v.name} value={v.name}>
+                      {voiceLabel(v.name)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <div
-            className="h-1.5 w-full overflow-hidden rounded-full"
-            style={{ background: "var(--wfd-border)" }}
-          >
-            <div
-              className="h-full rounded-full transition-[width]"
-              style={{ width: `${progressRatio * 100}%`, background: "var(--wfd-navy)" }}
-            />
-          </div>
-          <p className="wfd-mono mt-1.5 text-xs font-semibold" style={{ color: "var(--wfd-muted)" }}>
-            {formatTime(elapsed)} / {formatTime(duration)}
-          </p>
-        </div>
       </div>
+
+      <p className="mt-2 text-[13px] font-bold" style={{ color: "var(--wfd-red-dark)" }}>
+        {stateLabel}
+        {!voiceOverride && voiceName && (
+          <span className="wfd-mono ml-1.5 font-semibold" style={{ color: "var(--wfd-muted-2)" }}>
+            · {voiceLabel(voiceName)}
+          </span>
+        )}
+      </p>
+
       {unsupported && (
         <p
-          className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-bold"
           style={{ background: "var(--wfd-red-tint)", color: "var(--wfd-red-dark)" }}
         >
           <TriangleAlert className="size-3.5 shrink-0" />

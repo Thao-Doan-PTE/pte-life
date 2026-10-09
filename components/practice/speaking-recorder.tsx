@@ -44,10 +44,16 @@ function getSpeechRecognition(): MinimalSpeechRecognition | null {
 
 export function SpeakingRecorderPlayer({
   autoStart = false,
+  embedded = false,
+  spaceShortcut = true,
   prepSeconds,
   recordSeconds,
   onRecordingComplete,
 }: {
+  /** true khi nằm chung 1 khung với nội dung phía trên — bỏ viền/nền/padding của khung ngoài. */
+  embedded?: boolean;
+  /** phím Space bắt đầu / dừng ghi âm (khi không đang gõ trong ô nhập); mặc định bật, vì màn "sẵn sàng" có gợi ý phím Space. */
+  spaceShortcut?: boolean;
   /** true để tự động bắt đầu ghi âm ngay khi mount (sau tiếng beep), không cần
    * học viên bấm "Nhấn để ghi âm" — đúng luồng thi thật. */
   autoStart?: boolean;
@@ -334,65 +340,85 @@ export function SpeakingRecorderPlayer({
     setCountdown(prepSeconds);
   };
 
+  useEffect(() => {
+    if (!spaceShortcut) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat) return;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || tag === "AUDIO") return;
+      if (phase === "idle") {
+        e.preventDefault();
+        handleStart();
+      } else if (phase === "recording") {
+        e.preventDefault();
+        handleStopEarly();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spaceShortcut, phase]);
+
   return (
     <div
-      className="flex flex-col items-center gap-4 rounded-xl border p-6"
-      style={{ background: "var(--wfd-surface)", borderColor: "var(--wfd-border)" }}
+      className={
+        phase === "idle"
+          ? "flex flex-col items-center gap-4 rounded-2xl border border-dashed p-6"
+          : embedded
+            ? "flex flex-col items-center gap-4 border-t pt-5"
+            : "flex flex-col items-center gap-4 rounded-xl border p-6"
+      }
+      style={
+        phase === "idle"
+          ? { background: "var(--wfd-bg)", borderColor: "var(--wfd-border)" }
+          : embedded
+            ? { borderColor: "var(--wfd-border)" }
+            : { background: "var(--wfd-surface)", borderColor: "var(--wfd-border)" }
+      }
     >
       {phase === "idle" && (
-        <div className="flex w-full flex-col items-center gap-3">
-          <p className="text-sm font-semibold" style={{ color: "var(--wfd-muted)" }}>
-            Sẵn sàng ghi âm
-          </p>
-          <div
-            className="relative flex h-16 w-full items-center justify-center gap-1 rounded-lg"
-            style={{ background: "var(--wfd-code-bg)" }}
-          >
-            {Array.from({ length: 32 }).map((_, i) => {
-              const ratio = 0.25 + 0.35 * Math.abs(Math.sin(i * 0.9)) + 0.35 * Math.abs(Math.sin(i * 2.3 + 1));
-              return (
-                <span
-                  key={i}
-                  className="w-1 shrink-0 rounded-full"
-                  style={{ height: `${Math.round(ratio * 40)}px`, background: "var(--wfd-navy)" }}
-                />
-              );
-            })}
-            <span
-              className="absolute flex size-10 items-center justify-center rounded-full text-white shadow-sm"
-              style={{ background: "var(--wfd-red-dark)" }}
-            >
-              <Mic className="size-5" />
-            </span>
+        <div className="flex w-full flex-col items-center gap-5 py-2">
+          <div className="flex items-center justify-center gap-[3px]" aria-hidden="true">
+            {Array.from({ length: 36 }).map((_, i) => (
+              <span key={i} className="size-[3px] shrink-0 rounded-full" style={{ background: "var(--wfd-border)" }} />
+            ))}
           </div>
-          <p className="wfd-mono text-xs font-semibold" style={{ color: "var(--wfd-muted)" }}>
-            00:00 / {String(recordSeconds).padStart(2, "0")}s
-          </p>
           <button
             type="button"
             onClick={handleStart}
-            className="flex w-full items-center justify-center gap-2 rounded-[10px] px-6 py-3 text-sm font-bold text-white"
-            style={{ background: "var(--wfd-red-dark)" }}
+            aria-label="Nhấn để ghi âm"
+            className="flex size-16 items-center justify-center rounded-full text-white shadow-lg transition-transform hover:scale-105"
+            style={{ background: "var(--wfd-red)" }}
           >
-            <Mic className="size-4" /> Nhấn để ghi âm
+            <Mic className="size-6" />
           </button>
+          <p className="text-[15px]" style={{ color: "var(--wfd-muted)" }}>
+            Nhấn{" "}
+            <span
+              className="wfd-mono rounded-md border px-1.5 py-0.5 text-[13px]"
+              style={{ borderColor: "var(--wfd-border)", background: "var(--wfd-surface)", color: "var(--wfd-ink)" }}
+            >
+              Space
+            </span>{" "}
+            hoặc nút micro để bắt đầu
+          </p>
         </div>
       )}
 
       {phase === "requesting" && (
-        <p className="text-sm text-muted-foreground">Đang xin quyền micro...</p>
+        <p className="text-[15px] text-muted-foreground">Đang xin quyền micro...</p>
       )}
 
       {phase === "prep" && (
         <div className="flex flex-col items-center gap-1">
-          <p className="text-sm text-muted-foreground">Chuẩn bị</p>
+          <p className="text-[15px] text-muted-foreground">Chuẩn bị</p>
           <p className="text-4xl font-semibold tabular-nums">{countdown}s</p>
         </div>
       )}
 
       {phase === "recording" && (
         <div className="flex w-full flex-col items-center gap-3">
-          <p className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#b81620" }}>
+          <p className="flex items-center gap-2 text-[15px] font-semibold" style={{ color: "#b81620" }}>
             <Mic className="size-4" />
             Đang ghi âm... Hãy nói vào microphone chính xác câu bạn vừa nghe!
           </p>
@@ -411,13 +437,13 @@ export function SpeakingRecorderPlayer({
               />
             ))}
           </div>
-          <p className="text-xs font-semibold" style={{ color: "var(--wfd-muted)" }}>
+          <p className="text-[13px] font-semibold" style={{ color: "var(--wfd-muted)" }}>
             Đang ghi âm câu trả lời của bạn — còn {countdown} giây.
           </p>
           <button
             type="button"
             onClick={handleStopEarly}
-            className="flex w-full items-center justify-center gap-2 rounded-[10px] border px-6 py-3 text-sm font-bold"
+            className="flex w-full items-center justify-center gap-2 rounded-[10px] border px-6 py-3 text-[15px] font-bold"
             style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
           >
             <Square className="size-4" /> Dừng ghi âm
@@ -427,7 +453,7 @@ export function SpeakingRecorderPlayer({
 
       {phase === "done" && audioUrl && (
         <div className="flex w-full flex-col items-center gap-3">
-          <p className="text-sm font-medium">Nghe lại bài ghi âm của bạn</p>
+          <p className="text-[15px] font-medium">Nghe lại bài ghi âm của bạn</p>
           <audio controls src={audioUrl} className="w-full" />
           <Button variant="outline" size="sm" className="gap-1" onClick={handleRetry}>
             <RotateCcw className="size-3.5" /> Ghi âm lại
@@ -437,7 +463,7 @@ export function SpeakingRecorderPlayer({
 
       {phase === "error" && (
         <div className="flex flex-col items-center gap-2">
-          <p className="text-sm text-destructive">{errorMessage}</p>
+          <p className="text-[15px] text-destructive">{errorMessage}</p>
           <Button variant="outline" size="sm" onClick={handleRetry}>
             Thử lại
           </Button>

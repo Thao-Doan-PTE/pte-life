@@ -1,0 +1,69 @@
+/* PTE-Life design tokens v3 — sinh tự động từ tokens.json. Không sửa tay; sửa tokens.json rồi sinh lại. */
+:root {
+  --surface-page: #FFFFFF;
+  --surface-card: #FAF6F2;
+  --surface-muted: #F3ECE6;
+  --border-default: #E7DDD5;
+  --charcoal: #2B2120;
+  --text-primary: #2B2120;
+  --text-secondary: #6B5E58;
+  --on-charcoal: #F3ECE6;
+  --on-charcoal-secondary: #BFB1A8;
+  --charcoal-line: #463733;
+  --brand-red: #D32F2F;
+  --cta-red: #D32F2F;
+  --cta-red-hover: #B71C1C;
+  --cta-red-active: #9B1B1B;
+  --cta-text: #FFFFFF;
+  --focus-ring: #D32F2F;
+  --brand-red-text: #B71C1C;
+  --red-tint: #FDECEA;
+  --red-soft: #F5C6C3;
+  --secondary-btn-border: #2B2120;
+  --secondary-btn-text: #2B2120;
+  --success: #2E7D32;
+  --error: #C62828;
+  --warning: #EF6C00;
+  --warning-tint: #FFE0B2;
+  --info: #6A3D9A;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Dark: chỉ bật khi app hỗ trợ dark mode. Màn làm bài PTE luôn Light. */
+:root[data-theme="dark"] {
+  --surface-page: #171211;
+  --surface-card: #2B2120;
+  --surface-muted: #352925;
+  --border-default: #463733;
+  --charcoal: #2B2120;
+  --text-primary: #F5EFEA;
+  --text-secondary: #BFB1A8;
+  --on-charcoal: #F3ECE6;
+  --on-charcoal-secondary: #BFB1A8;
+  --charcoal-line: #463733;
+  --brand-red: #EF5350;
+  --cta-red: #D32F2F;
+  --cta-red-hover: #B71C1C;
+  --cta-red-active: #9B1B1B;
+  --cta-text: #FFFFFF;
+  --focus-ring: #EF5350;
+  --brand-red-text: #EF9A9A;
+  --red-tint: #3A1F1F;
+  --red-soft: #5A2A28;
+  --secondary-btn-border: #F5EFEA;
+  --secondary-btn-text: #F5EFEA;
+  --success: #66BB6A;
+  --error: #EF5350;
+  --warning: #FFB74D;
+  --warning-tint: #4A3215;
+  --info: #B39DDB;
+}

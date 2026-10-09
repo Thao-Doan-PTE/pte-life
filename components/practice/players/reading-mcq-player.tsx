@@ -40,10 +40,10 @@ export function ReadingMcqPlayer({
   if (result && selected) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="whitespace-pre-line rounded-xl border bg-card p-4 text-sm text-muted-foreground">
+        <p className="font-passage whitespace-pre-line rounded-xl border bg-card p-4 text-[17px] leading-[1.8] text-muted-foreground">
           {passage}
         </p>
-        <p className="font-medium">{question}</p>
+        <p className="font-passage text-[17px] font-medium">{question}</p>
         <ChoiceReview
           options={options}
           selected={selected}
@@ -67,7 +67,7 @@ export function ReadingMcqPlayer({
         maxSelectable={1}
         onSubmit={handleSubmit}
       />
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-[15px] text-destructive">{error}</p>}
     </div>
   );
 }

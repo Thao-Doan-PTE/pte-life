@@ -1,11 +1,10 @@
 import type { ExamPackage } from "@/lib/question-types";
+import type { Role } from "@/lib/generated/prisma/enums";
 import type { DefaultSession } from "next-auth";
-
-export type UserRole = "student" | "admin";
 
 declare module "next-auth" {
   interface User {
-    role: UserRole;
+    roles: Role[];
     examPackage: ExamPackage;
     expiresAt: string;
     reservationsLeft: number;
@@ -14,7 +13,7 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: UserRole;
+      roles: Role[];
       examPackage: ExamPackage;
       expiresAt: string;
       reservationsLeft: number;
@@ -24,7 +23,7 @@ declare module "next-auth" {
 
 declare module "@auth/core/jwt" {
   interface JWT {
-    role: UserRole;
+    roles: Role[];
     examPackage: ExamPackage;
     expiresAt: string;
     reservationsLeft: number;

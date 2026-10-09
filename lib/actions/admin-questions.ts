@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/actions/admin";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { QUESTION_TYPES, type ExamPackage } from "@/lib/question-types";
+import type { QuestionBank } from "@/lib/generated/prisma/client";
 import { QUESTION_IMPORT_SCHEMAS, parseAvailableIn } from "@/lib/question-import/schemas";
 import { parseCsv, csvRowsToRecords } from "@/lib/question-import/csv";
 
@@ -23,12 +24,12 @@ export async function getQuestionCounts() {
   }));
 }
 
-export async function getQuestionsForTypeAdmin(questionTypeId: string) {
+export async function getQuestionsForTypeAdmin(questionTypeId: string, bank?: QuestionBank) {
   await requireAdmin();
   return prisma.question.findMany({
-    where: { questionTypeId },
+    where: { questionTypeId, ...(bank ? { bank } : {}) },
     orderBy: { createdAt: "desc" },
-    select: { id: true, code: true, availableIn: true, createdAt: true },
+    select: { id: true, code: true, availableIn: true, bank: true, createdAt: true },
   });
 }
 
@@ -71,11 +72,16 @@ export async function importQuestionsAction(
 
   const questionTypeId = formData.get("questionTypeId") as string;
   const text = formData.get("csvContent") as string | null;
+  const bankInput = formData.get("bank") as string | null;
   const schema = QUESTION_IMPORT_SCHEMAS[questionTypeId];
 
   if (!schema) {
     return { ok: false, created: 0, updated: 0, errors: [{ row: 0, code: "-", error: "Dạng câu hỏi không hợp lệ." }] };
   }
+  if (bankInput !== "PTE" && bankInput !== "TU") {
+    return { ok: false, created: 0, updated: 0, errors: [{ row: 0, code: "-", error: "Ngân hàng đề không hợp lệ." }] };
+  }
+  const bank: QuestionBank = bankInput;
   if (!text) {
     return { ok: false, created: 0, updated: 0, errors: [{ row: 0, code: "-", error: "Vui lòng chọn 1 file CSV." }] };
   }
@@ -147,6 +153,7 @@ export async function importQuestionsAction(
         questionTypeId,
         skill: schema.skill,
         availableIn: row.availableIn,
+        bank,
         content: row.content as Prisma.InputJsonValue,
       },
       create: {
@@ -154,6 +161,7 @@ export async function importQuestionsAction(
         skill: schema.skill,
         code: row.code,
         availableIn: row.availableIn,
+        bank,
         content: row.content as Prisma.InputJsonValue,
       },
     });

@@ -25,6 +25,7 @@ const TABS: { value: string; label: string }[] = [
   { value: "full", label: "Đề thi đầy đủ" },
   { value: "section", label: "Thi theo phần" },
   { value: "question", label: "Thi theo dạng câu hỏi" },
+  { value: "tu", label: "Đề Tủ" },
 ];
 
 export function MocktestHistoryList({ items }: { items: MocktestHistoryItem[] }) {
@@ -49,7 +50,7 @@ export function MocktestHistoryList({ items }: { items: MocktestHistoryItem[] })
             key={t.value}
             onClick={() => setTab(t.value)}
             className={cn(
-              "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+              "border-b-2 px-3 py-2 text-[15px] font-medium transition-colors",
               tab === t.value
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -61,7 +62,7 @@ export function MocktestHistoryList({ items }: { items: MocktestHistoryItem[] })
       </div>
 
       {filtered.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
+        <p className="py-8 text-center text-[15px] text-muted-foreground">
           Chưa có bài test nào.
         </p>
       ) : (
@@ -72,13 +73,13 @@ export function MocktestHistoryList({ items }: { items: MocktestHistoryItem[] })
               className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium">
+                <p className="text-[15px] font-medium">
                   {mockTestSessionLabel(item)}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
                   <Badge
                     variant={item.status === "completed" ? "secondary" : "outline"}
-                    className="text-[10px]"
+                    className="text-xs"
                   >
                     {item.status === "completed" ? "Hoàn thành" : "Đang làm dở"}
                   </Badge>
@@ -87,7 +88,7 @@ export function MocktestHistoryList({ items }: { items: MocktestHistoryItem[] })
               </div>
               <div className="flex items-center gap-3">
                 {item.scorePct !== null && (
-                  <span className={cn("text-sm font-semibold", scoreColorClass(item.scorePct))}>
+                  <span className={cn("text-[15px] font-semibold", scoreColorClass(item.scorePct))}>
                     {item.scorePct}%
                   </span>
                 )}

@@ -5,27 +5,41 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Clock,
-  FileText,
+  Eye,
+  EyeOff,
   Gauge,
   Headphones,
+  Languages,
   List,
   Mic2,
   Pause,
   Play,
   Repeat,
   RotateCcw,
-  Square,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Volume2,
 } from "lucide-react";
 import { fetchAzureTts, isBrowserTtsSupported, speakWithBrowserTts } from "@/lib/wfd-tts-client";
 import { PTE_VOICE_POOL } from "@/lib/azure-tts";
 
-const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5];
+const SPEED_OPTIONS = [0.75, 0.9, 1, 1.1, 1.25];
 
 function voiceLabel(voiceName: string | null): string {
   if (!voiceName) return "Ngẫu nhiên (xoay vòng theo đề thi thật)";
   const voice = PTE_VOICE_POOL.find((v) => v.name === voiceName);
   if (!voice) return voiceName;
   return `${voice.gender === "female" ? "Nữ" : "Nam"} (${voice.accent})`;
+}
+
+function formatRemaining(totalSec: number): string {
+  if (totalSec < 60) return `${Math.round(totalSec)} giây`;
+  const totalMin = Math.round(totalSec / 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m} phút`;
+  return m === 0 ? `${h} giờ` : `${h} giờ ${m} phút`;
 }
 
 function formatClipTime(s: number): string {
@@ -49,10 +63,38 @@ interface PlaylistItem {
 }
 
 const REPEAT_OPTIONS = [1, 2, 3, 4, 5];
-const PAUSE_OPTIONS = [1, 2, 3, 5];
+const PAUSE_OPTIONS = [0, 1, 2, 3, 5];
+
+function PillRow<T extends number>({
+  options,
+  value,
+  onChange,
+  format,
+}: {
+  options: T[];
+  value: T;
+  onChange: (v: T) => void;
+  format: (v: T) => string;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 rounded-xl p-0.5 sm:gap-1 sm:p-1" style={{ background: "var(--wfd-code-bg)" }}>
+      {options.map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onChange(opt)}
+          className="flex-1 rounded-lg px-1 py-1.5 text-[13px] font-bold transition-colors sm:px-2 sm:py-2 sm:text-[15px]"
+          style={value === opt ? { background: "var(--wfd-red)", color: "#ffffff" } : { color: "var(--wfd-ink)" }}
+        >
+          {format(opt)}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function selectClassName() {
-  return "w-full appearance-none rounded-xl border px-3.5 py-2.5 text-sm font-medium";
+  return "w-full appearance-none rounded-xl border px-3.5 py-2.5 text-[15px] font-medium";
 }
 
 function selectStyle() {
@@ -62,9 +104,13 @@ function selectStyle() {
 export function WfdListenPractice({
   questions,
   backHref,
+  typeName,
+  typeCode,
 }: {
   questions: WfdListenQuestion[];
   backHref: string;
+  typeName: string;
+  typeCode: string;
 }) {
   const total = questions.length;
   const [phase, setPhase] = useState<"setup" | "playing" | "done">("setup");
@@ -171,6 +217,18 @@ export function WfdListenPractice({
     speakWithBrowserTts(item.sentence, () => scheduleNext(idx), 0.95 * playbackRateRef.current);
   }
 
+  async function handlePreviewVoice() {
+    const sample = "This is a preview of the selected voice.";
+    const azure = await fetchAzureTts(sample, voiceOverride ?? undefined);
+    if (azure) {
+      new Audio(azure.url).play();
+      return;
+    }
+    if (isBrowserTtsSupported()) {
+      speakWithBrowserTts(sample, () => {});
+    }
+  }
+
   function handleStart() {
     if (!validRange || questionCount === 0) return;
     const list: PlaylistItem[] = [];
@@ -225,6 +283,42 @@ export function WfdListenPractice({
     }
   }
 
+  function stopCurrentPlayback() {
+    if (timeoutIdRef.current) {
+      window.clearTimeout(timeoutIdRef.current);
+      timeoutIdRef.current = null;
+    }
+    currentAudioRef.current?.pause();
+    currentAudioRef.current = null;
+    window.speechSynthesis?.cancel();
+    pendingNextIdxRef.current = null;
+  }
+
+  function handleSkipNext() {
+    stopCurrentPlayback();
+    pausedRef.current = false;
+    setIsPaused(false);
+    playAt(pos + 1);
+  }
+
+  function handleSkipPrev() {
+    stopCurrentPlayback();
+    pausedRef.current = false;
+    setIsPaused(false);
+    playAt(Math.max(0, pos - 1));
+  }
+
+  function setLivePauseSec(v: number) {
+    setPauseSec(v);
+    pauseSecRef.current = v;
+  }
+
+  function setLivePlaybackRate(v: number) {
+    setPlaybackRate(v);
+    playbackRateRef.current = v;
+    if (currentAudioRef.current) currentAudioRef.current.playbackRate = v;
+  }
+
   function handleStop() {
     cancelledRef.current = true;
     pausedRef.current = false;
@@ -244,339 +338,445 @@ export function WfdListenPractice({
   const overallRatio = playlist.length > 0 ? (pos + 1) / playlist.length : 0;
 
   return (
-    <div className="relative overflow-hidden">
-      <div
-        className="pointer-events-none absolute -top-16 -left-16 size-64 rounded-full opacity-60"
-        style={{ background: "var(--wfd-red-tint)" }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute top-1/3 -right-20 size-72 rounded-full opacity-50"
-        style={{ background: "var(--wfd-red-tint)" }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute -bottom-20 left-1/4 size-56 rounded-full opacity-40"
-        style={{ background: "var(--wfd-red-tint)" }}
-        aria-hidden="true"
-      />
+    <div className="wfd-force-light relative overflow-hidden">
 
-      <div className="relative mx-auto flex max-w-[1100px] flex-col gap-6 px-5 py-8 sm:px-10">
-        <Link
-          href={backHref}
-          className="flex w-fit items-center gap-2 text-sm font-medium"
-          style={{ color: "var(--wfd-muted)" }}
-        >
-          <ArrowLeft className="size-4" /> Quay lại danh sách
-        </Link>
-
-        <div className="relative flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div
-              className="flex size-16 shrink-0 items-center justify-center rounded-full"
-              style={{ background: "var(--wfd-red-tint)", color: "var(--wfd-red)" }}
+      <div className="relative mx-auto flex max-w-5xl flex-col gap-3 px-4 py-4 sm:gap-6 sm:px-10 sm:py-8">
+        {phase === "playing" && currentItem ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4" style={{ borderColor: "var(--wfd-border)" }}>
+            <button
+              type="button"
+              onClick={handleStop}
+              className="flex shrink-0 items-center gap-1.5 text-[15px] font-semibold"
+              style={{ color: "var(--wfd-ink)" }}
             >
-              <Headphones className="size-8" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold sm:text-[28px]">
-                <span style={{ color: "var(--wfd-black-sem)" }}>Luyện</span>{" "}
-                <span style={{ color: "var(--wfd-red)" }}>nghe</span>
-              </h1>
-              <p className="mt-1 text-sm" style={{ color: "var(--wfd-muted)" }}>
-                Phát audio liên tục, không cần gõ. Tập trung vào lắng nghe.
+              <ArrowLeft className="size-4" /> Quay lại cài đặt chế độ luyện nghe
+            </button>
+            <div className="flex items-center gap-2">
+              {typeCode && (
+                <span
+                  className="flex shrink-0 items-center justify-center rounded-lg px-2 py-1 text-[13px] font-extrabold text-white"
+                  style={{ background: "var(--wfd-red)" }}
+                >
+                  {typeCode}
+                </span>
+              )}
+              <p className="text-[15px] font-bold tracking-wide uppercase" style={{ color: "var(--wfd-ink)" }}>
+                {typeName}
               </p>
             </div>
           </div>
+        ) : (
+          <>
+            <Link
+              href={backHref}
+              className="flex w-fit items-center gap-1.5 text-[13px] font-medium sm:gap-2 sm:text-[15px]"
+              style={{ color: "var(--wfd-muted)" }}
+            >
+              <ArrowLeft className="size-3.5 sm:size-4" /> Quay lại danh sách
+            </Link>
 
-          <div
-            className="pointer-events-none hidden -rotate-6 items-center gap-2 sm:flex"
-            style={{ color: "var(--wfd-red)" }}
-            aria-hidden="true"
-          >
-            <span className="font-serif text-lg leading-tight italic">
-              Listen
-              <br />
-              to improve
-            </span>
-            <Headphones className="size-10 shrink-0" />
-          </div>
-        </div>
+            <div className="relative flex items-start justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <div className="shrink-0" style={{ color: "var(--wfd-red)" }}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="size-10 sm:size-14" aria-hidden="true">
+                    <path d="M5 2h9l5 5v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
+                    <path d="M14 2v4a1 1 0 0 0 1 1h4z" fill="var(--wfd-red-tint)" />
+                    <rect x="3" y="12" width="16" height="6" rx="1" fill="var(--wfd-red-tint)" />
+                    <text
+                      x="11"
+                      y="16.8"
+                      textAnchor="middle"
+                      fontSize="5"
+                      fontWeight="800"
+                      fill="currentColor"
+                      fontFamily="sans-serif"
+                    >
+                      MP3
+                    </text>
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-[20px] font-bold sm:text-[28px]" style={{ color: "var(--wfd-black-sem)" }}>
+                    Chế độ luyện nghe
+                  </h1>
+                  <p className="mt-0.5 text-[13px] sm:mt-1 sm:text-[15px]" style={{ color: "var(--wfd-muted)" }}>
+                    Chọn để cấu hình chế độ nghe theo đúng nhu cầu của bạn.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className="pointer-events-none hidden -rotate-6 items-center gap-2 sm:flex"
+                style={{ color: "var(--wfd-red)" }}
+                aria-hidden="true"
+              >
+                <span className="font-serif text-[20px] leading-tight italic">
+                  Listen
+                  <br />
+                  to improve
+                </span>
+                <Headphones className="size-10 shrink-0" />
+              </div>
+            </div>
+          </>
+        )}
 
         <div
-          className="relative rounded-2xl border p-6"
+          className="relative rounded-2xl border p-4 sm:p-6"
           style={{ background: "var(--wfd-surface)", borderColor: "var(--wfd-border)" }}
         >
         {phase === "setup" && (
-          <div className="flex flex-col gap-6">
-            <div
-              className="flex items-center gap-3 rounded-2xl p-4"
-              style={{ background: "var(--wfd-red-tint)" }}
-            >
-              <div
-                className="flex size-11 shrink-0 items-center justify-center rounded-xl"
-                style={{ background: "var(--wfd-red)", color: "#ffffff" }}
-              >
-                <Headphones className="size-5" />
+          <div className="flex flex-col gap-3 sm:gap-6">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3 sm:gap-x-8 sm:gap-y-6">
+              <div className="col-span-2 sm:col-span-1">
+                <label className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold sm:mb-1.5 sm:text-[15px]">
+                  <List className="size-3.5 sm:size-4" /> Phạm vi câu
+                </label>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={total}
+                    value={fromNum}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      setFromNum(Number.isFinite(n) ? Math.min(Math.max(1, n), total) : 1);
+                    }}
+                    className="w-14 rounded-lg px-2 py-1.5 text-center text-[15px] font-bold sm:w-16 sm:py-2"
+                    style={{ background: "var(--wfd-code-bg)", color: "var(--wfd-ink)" }}
+                  />
+                  <span className="text-[15px] font-bold" style={{ color: "var(--wfd-muted)" }}>
+                    →
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={total}
+                    value={toNum}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      setToNum(Number.isFinite(n) ? Math.min(Math.max(1, n), total) : total);
+                    }}
+                    className="w-14 rounded-lg px-2 py-1.5 text-center text-[15px] font-bold sm:w-16 sm:py-2"
+                    style={{ background: "var(--wfd-code-bg)", color: "var(--wfd-ink)" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFromNum(1);
+                      setToNum(total);
+                    }}
+                    className="text-[15px] font-bold"
+                    style={{ color: "var(--wfd-red)" }}
+                  >
+                    Tất cả
+                  </button>
+                </div>
               </div>
+
               <div>
-                <p className="text-base font-bold">Chế độ Luyện nghe</p>
-                <p className="text-sm" style={{ color: "var(--wfd-muted)" }}>
-                  Chỉ nghe, không cần gõ. Chọn phạm vi câu và số lần lặp.
-                </p>
+                <label className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold sm:mb-1.5 sm:text-[15px]">
+                  <Repeat className="size-3.5 sm:size-4" /> Số lần lặp
+                </label>
+                <PillRow options={REPEAT_OPTIONS} value={repeatEach} onChange={setRepeatEach} format={(n) => `${n}`} />
+              </div>
+
+              <div>
+                <label className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold sm:mb-1.5 sm:text-[15px]">
+                  <Clock className="size-3.5 sm:size-4" /> Khoảng dừng
+                </label>
+                <PillRow options={PAUSE_OPTIONS} value={pauseSec} onChange={setPauseSec} format={(n) => `${n}s`} />
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
+                <label className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold sm:mb-1.5 sm:text-[15px]">
+                  <Mic2 className="size-3.5 sm:size-4" /> Giọng đọc
+                </label>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <select
+                    className={selectClassName()}
+                    style={selectStyle()}
+                    value={voiceOverride ?? ""}
+                    onChange={(e) => setVoiceOverride(e.target.value || null)}
+                  >
+                    <option value="">{voiceLabel(null)}</option>
+                    {PTE_VOICE_POOL.map((v) => (
+                      <option key={v.name} value={v.name}>
+                        {voiceLabel(v.name)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handlePreviewVoice}
+                    className="flex size-9 shrink-0 items-center justify-center rounded-lg border"
+                    style={selectStyle()}
+                    aria-label="Nghe thử giọng đọc"
+                  >
+                    <Volume2 className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
+                <label className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold sm:mb-1.5 sm:text-[15px]">
+                  <Gauge className="size-3.5 sm:size-4" /> Tốc độ đọc
+                </label>
+                <PillRow options={SPEED_OPTIONS} value={playbackRate} onChange={setPlaybackRate} format={(r) => `${r}x`} />
+              </div>
+
+              <div className="hidden sm:block">
+                <label className="mb-1.5 flex items-center gap-1.5 text-[15px] font-semibold">
+                  <Languages className="size-4" /> Dịch tiếng Việt
+                </label>
+                <div
+                  className="flex items-center justify-between gap-2 rounded-xl px-3.5 py-2.5"
+                  style={{ background: "var(--wfd-code-bg)" }}
+                >
+                  <span className="text-[15px] font-medium">Hiện nghĩa dưới câu</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showText}
+                    onClick={() => setShowText((v) => !v)}
+                    className="relative h-5 w-9 shrink-0 rounded-full transition-colors"
+                    style={{ background: showText ? "var(--wfd-red)" : "var(--wfd-border)" }}
+                  >
+                    <span
+                      className="absolute top-0.5 size-4 rounded-full bg-white transition-[left]"
+                      style={{ left: showText ? "18px" : "2px" }}
+                    />
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
-                  <FileText className="size-4" /> Từ câu
-                </label>
-                <select
-                  className={selectClassName()}
-                  style={selectStyle()}
-                  value={fromNum}
-                  onChange={(e) => setFromNum(Number(e.target.value))}
-                >
-                  {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      Câu {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
-                  <List className="size-4" /> Đến câu
-                </label>
-                <select
-                  className={selectClassName()}
-                  style={selectStyle()}
-                  value={toNum}
-                  onChange={(e) => setToNum(Number(e.target.value))}
-                >
-                  {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      Câu {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
-                  <Repeat className="size-4" /> Số lần lặp mỗi câu
-                </label>
-                <select
-                  className={selectClassName()}
-                  style={selectStyle()}
-                  value={repeatEach}
-                  onChange={(e) => setRepeatEach(Number(e.target.value))}
-                >
-                  {REPEAT_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n} lần
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
-                  <Clock className="size-4" /> Khoảng dừng giữa các lần đọc
-                </label>
-                <select
-                  className={selectClassName()}
-                  style={selectStyle()}
-                  value={pauseSec}
-                  onChange={(e) => setPauseSec(Number(e.target.value))}
-                >
-                  {PAUSE_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n} giây
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
-                  <Mic2 className="size-4" /> Giọng đọc
-                </label>
-                <select
-                  className={selectClassName()}
-                  style={selectStyle()}
-                  value={voiceOverride ?? ""}
-                  onChange={(e) => setVoiceOverride(e.target.value || null)}
-                >
-                  <option value="">{voiceLabel(null)}</option>
-                  {PTE_VOICE_POOL.map((v) => (
-                    <option key={v.name} value={v.name}>
-                      {voiceLabel(v.name)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
-                  <Gauge className="size-4" /> Tốc độ đọc
-                </label>
-                <select
-                  className={selectClassName()}
-                  style={selectStyle()}
-                  value={playbackRate}
-                  onChange={(e) => setPlaybackRate(Number(e.target.value))}
-                >
-                  {SPEED_OPTIONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}x
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <label
-              className="flex items-center gap-3 rounded-xl border p-4"
-              style={{ borderColor: "var(--wfd-red-tint-border)", background: "var(--wfd-red-tint)" }}
-            >
-              <input
-                type="checkbox"
-                checked={showText}
-                onChange={(e) => setShowText(e.target.checked)}
-                className="size-5 shrink-0 accent-current"
-                style={{ color: "var(--wfd-red)" }}
-              />
-              <span className="text-sm">
-                <span className="font-bold">Dịch tiếng Việt</span>{" "}
-                <span style={{ color: "var(--wfd-muted)" }}>
-                  Hiện nội dung câu và bản dịch tiếng Việt trong khi phát
-                </span>
+            <label className="flex items-center justify-between gap-2 sm:hidden">
+              <span className="flex items-center gap-1.5 text-[13px] font-semibold">
+                <Languages className="size-3.5" /> Hiện nghĩa dưới câu
               </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showText}
+                onClick={() => setShowText((v) => !v)}
+                className="relative h-5 w-9 shrink-0 rounded-full transition-colors"
+                style={{ background: showText ? "var(--wfd-red)" : "var(--wfd-border)" }}
+              >
+                <span
+                  className="absolute top-0.5 size-4 rounded-full bg-white transition-[left]"
+                  style={{ left: showText ? "18px" : "2px" }}
+                />
+              </button>
             </label>
 
             <div
-              className="flex items-start gap-2 rounded-xl p-4 text-sm"
-              style={{ background: "var(--wfd-surface-2)", color: "var(--wfd-ink)" }}
+              className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 sm:gap-3 sm:pt-5"
+              style={{ borderColor: "var(--wfd-border)" }}
             >
-              <FileText className="mt-0.5 size-4 shrink-0" style={{ color: "var(--wfd-muted-2)" }} />
               {validRange && questionCount > 0 ? (
-                <span>
-                  Sẽ phát <strong>{questionCount} câu</strong> (câu {fromNum} → {toNum}), mỗi câu{" "}
-                  <strong>{repeatEach} lần</strong>. Tổng cộng <strong>{totalListens} lượt nghe</strong>.
-                </span>
+                <div>
+                  <p className="text-[13px] font-bold sm:text-[15px]">
+                    {questionCount} câu × {repeatEach} lần ={" "}
+                    <span style={{ color: "var(--wfd-red)" }}>{totalListens} lượt nghe</span>
+                  </p>
+                  <p className="mt-1 text-xs sm:mt-1.5 sm:text-[13px]" style={{ color: "var(--wfd-muted)" }}>
+                    Câu {fromNum} → {toNum} · khoảng {formatRemaining(totalListens * (4 + pauseSec))}
+                  </p>
+                </div>
               ) : (
-                <span style={{ color: "var(--wfd-red-dark)" }}>
+                <p className="text-[13px] font-medium sm:text-[15px]" style={{ color: "var(--wfd-red-dark)" }}>
                   Phạm vi không hợp lệ — &quot;Từ câu&quot; phải nhỏ hơn hoặc bằng &quot;Đến câu&quot;.
-                </span>
+                </p>
               )}
-            </div>
 
-            <button
-              type="button"
-              onClick={handleStart}
-              disabled={!validRange || questionCount === 0}
-              className="flex w-full items-center justify-center gap-2 rounded-[10px] px-6 py-3 text-base font-bold shadow-sm disabled:opacity-60"
-              style={{ background: "var(--brand-accent)", color: "var(--brand-accent-foreground)" }}
-            >
-              <Play className="size-5" fill="currentColor" /> Bắt đầu
-            </button>
+              <button
+                type="button"
+                onClick={handleStart}
+                disabled={!validRange || questionCount === 0}
+                className="flex w-fit items-center justify-center gap-2 rounded-[10px] px-4 py-2 text-[13px] font-bold text-white shadow-sm disabled:opacity-60 sm:px-5 sm:text-[15px]"
+                style={{ background: "var(--wfd-red)" }}
+              >
+                <Play className="size-4" fill="currentColor" /> Bắt đầu luyện nghe
+              </button>
+            </div>
           </div>
         )}
 
         {phase === "playing" && currentItem && (
-          <div className="flex flex-col items-center gap-6 text-center">
-            <div className="flex flex-wrap items-center justify-center gap-2">
+          <div
+            className="flex flex-col gap-5 rounded-2xl p-5"
+            style={{ background: "#12172a", color: "#f5f5f7" }}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex size-10 shrink-0 items-center justify-center rounded-xl"
+                  style={{ background: "var(--wfd-red)", color: "#ffffff" }}
+                >
+                  <Headphones className="size-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-[15px] font-bold">Walkman Mode</p>
+                  <p className="text-[13px]" style={{ color: "#9ca3af" }}>
+                    Nghe liên tục, tập trung vào âm thanh
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowText((v) => !v)}
+                className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold"
+                style={{ background: "#1b2140", color: "#f5f5f7" }}
+              >
+                {showText ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                {showText ? "Ẩn text" : "Hiện text"}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
               <span
-                className="wfd-mono rounded-full px-3 py-1 text-xs font-bold"
-                style={{ background: "var(--wfd-code-bg)", color: "var(--wfd-ink)" }}
+                className="wfd-mono rounded-full px-3 py-1 text-[13px] font-bold"
+                style={{ background: "#1b2140", color: "#f5f5f7" }}
               >
                 Câu {currentItem.qNum}
               </span>
               <span
-                className="rounded-full px-3 py-1 text-xs font-bold"
-                style={{ background: "var(--wfd-red-tint)", color: "var(--wfd-red-dark)" }}
+                className="rounded-full px-3 py-1 text-[13px] font-bold"
+                style={{ background: "var(--wfd-red)", color: "#ffffff" }}
               >
                 Lần {currentItem.repIndex}/{repeatEach}
               </span>
-              <span className="text-xs" style={{ color: "var(--wfd-muted)" }}>
-                {pos + 1}/{playlist.length} lượt nghe
+            </div>
+
+            <div className="flex items-center justify-between text-[13px]" style={{ color: "#9ca3af" }}>
+              <span>
+                Lượt <strong style={{ color: "#f5f5f7" }}>{pos}</strong> / {playlist.length}
+              </span>
+              <span>
+                Còn khoảng{" "}
+                <strong style={{ color: "#f5f5f7" }}>
+                  {formatRemaining(
+                    Math.max(0, playlist.length - (pos + 1)) * ((durationSec || 3) + pauseSec)
+                  )}
+                </strong>
               </span>
             </div>
 
-            <div
-              className="h-2 w-full max-w-md overflow-hidden rounded-full"
-              style={{ background: "var(--wfd-border)" }}
-            >
+            <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: "#1b2140" }}>
               <div
                 className="h-full rounded-full transition-[width]"
                 style={{ width: `${overallRatio * 100}%`, background: "var(--wfd-red)" }}
               />
             </div>
 
-            <div
-              className="flex w-full max-w-md flex-col gap-3 rounded-2xl border p-4"
-              style={{ borderColor: "var(--wfd-border)", background: "var(--wfd-surface)" }}
-            >
-              <div className="flex items-center justify-between text-xs" style={{ color: "var(--wfd-muted)" }}>
-                <span>Giọng đọc: {voiceLabel(currentVoice)}</span>
-                <span>Tốc độ: {playbackRate}x</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={togglePause}
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full text-white"
-                  style={{ background: "var(--wfd-navy)" }}
-                  aria-label={isPaused ? "Tiếp tục" : "Tạm dừng"}
+            <div className="rounded-xl p-4 text-center" style={{ background: "#1b2140" }}>
+              <p
+                className="font-passage text-[20px] leading-relaxed font-medium transition-[filter,opacity] duration-300"
+                style={showText ? undefined : { filter: "blur(6px)", opacity: 0.6 }}
+              >
+                {currentItem.sentence}
+              </p>
+              {currentItem.sentenceVi && (
+                <p
+                  className="mt-1 text-[15px] transition-[filter,opacity] duration-300"
+                  style={{ color: "#9ca3af", ...(showText ? {} : { filter: "blur(6px)", opacity: 0.6 }) }}
                 >
-                  {isPaused ? (
-                    <Play className="size-4 translate-x-[1px]" fill="currentColor" />
-                  ) : (
-                    <Pause className="size-4" fill="currentColor" />
-                  )}
-                </button>
-                <div
-                  className="h-1.5 flex-1 overflow-hidden rounded-full"
-                  style={{ background: "var(--wfd-border)" }}
-                >
-                  <div
-                    className="h-full rounded-full transition-[width]"
-                    style={{
-                      width: `${durationSec > 0 ? (elapsedSec / durationSec) * 100 : 0}%`,
-                      background: "var(--wfd-navy)",
-                    }}
-                  />
-                </div>
-                <span className="wfd-mono shrink-0 text-xs" style={{ color: "var(--wfd-muted-2)" }}>
-                  {formatClipTime(elapsedSec)} / {formatClipTime(durationSec)}
-                </span>
-              </div>
+                  {currentItem.sentenceVi}
+                </p>
+              )}
             </div>
 
-            {showText ? (
-              <div className="flex max-w-lg flex-col gap-2">
-                <p className="text-lg leading-relaxed font-medium">{currentItem.sentence}</p>
-                {currentItem.sentenceVi && (
-                  <p className="text-sm" style={{ color: "var(--wfd-muted)" }}>
-                    {currentItem.sentenceVi}
-                  </p>
+            <div className="flex items-center justify-center gap-5">
+              <Shuffle className="size-4" style={{ color: "#5b6272" }} aria-hidden="true" />
+              <button
+                type="button"
+                onClick={handleSkipPrev}
+                disabled={pos === 0}
+                className="flex size-9 items-center justify-center rounded-full disabled:opacity-40"
+                style={{ color: "#f5f5f7" }}
+                aria-label="Câu trước"
+              >
+                <SkipBack className="size-5" fill="currentColor" />
+              </button>
+              <button
+                type="button"
+                onClick={togglePause}
+                className="flex size-14 shrink-0 items-center justify-center rounded-full"
+                style={{ background: "#ffffff", color: "#12172a" }}
+                aria-label={isPaused ? "Tiếp tục" : "Tạm dừng"}
+              >
+                {isPaused ? (
+                  <Play className="size-6 translate-x-[1px]" fill="currentColor" />
+                ) : (
+                  <Pause className="size-6" fill="currentColor" />
                 )}
-              </div>
-            ) : (
-              <p className="text-sm" style={{ color: "var(--wfd-muted)" }}>
-                Đang phát âm thanh — tập trung lắng nghe...
-              </p>
-            )}
+              </button>
+              <button
+                type="button"
+                onClick={handleSkipNext}
+                className="flex size-9 items-center justify-center rounded-full"
+                style={{ color: "#f5f5f7" }}
+                aria-label="Câu tiếp theo"
+              >
+                <SkipForward className="size-5" fill="currentColor" />
+              </button>
+              <Repeat className="size-4" style={{ color: "var(--wfd-red)" }} aria-hidden="true" />
+            </div>
 
-            <button
-              type="button"
-              onClick={handleStop}
-              className="flex items-center gap-2 rounded-[10px] border px-6 py-2.5 text-sm font-bold"
-              style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
-            >
-              <Square className="size-4" /> Dừng & quay lại cài đặt
-            </button>
+            <div className="flex items-center justify-between text-[13px]" style={{ color: "#9ca3af" }}>
+              <span className="wfd-mono">
+                {formatClipTime(elapsedSec)} / {formatClipTime(durationSec)}
+              </span>
+              <span>Giọng đọc: {voiceLabel(currentVoice)}</span>
+            </div>
+
+            <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#242b45" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold" style={{ color: "#9ca3af" }}>
+                  Nghỉ
+                </span>
+                <div className="flex items-center gap-1">
+                  {PAUSE_OPTIONS.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setLivePauseSec(n)}
+                      className="rounded-full px-2.5 py-1 text-[13px] font-bold"
+                      style={
+                        pauseSec === n
+                          ? { background: "#ffffff", color: "#12172a" }
+                          : { color: "#9ca3af" }
+                      }
+                    >
+                      {n}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold" style={{ color: "#9ca3af" }}>
+                  Tốc độ
+                </span>
+                <div className="flex items-center gap-1">
+                  {SPEED_OPTIONS.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setLivePlaybackRate(r)}
+                      className="rounded-full px-2.5 py-1 text-[13px] font-bold"
+                      style={
+                        playbackRate === r
+                          ? { background: "#ffffff", color: "#12172a" }
+                          : { color: "#9ca3af" }
+                      }
+                    >
+                      {r}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -588,15 +788,15 @@ export function WfdListenPractice({
             >
               <Headphones className="size-7" />
             </div>
-            <p className="text-lg font-bold">Đã hoàn thành!</p>
-            <p className="text-sm" style={{ color: "var(--wfd-muted)" }}>
+            <p className="text-[20px] font-bold">Đã hoàn thành!</p>
+            <p className="text-[15px]" style={{ color: "var(--wfd-muted)" }}>
               Bạn vừa nghe {playlist.length} lượt qua {questionCount} câu.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
                 type="button"
                 onClick={handleRestart}
-                className="flex items-center gap-2 rounded-[10px] px-6 py-2.5 text-sm font-bold"
+                className="flex items-center gap-2 rounded-[10px] px-6 py-2.5 text-[15px] font-bold"
                 style={{ background: "var(--brand-accent)", color: "var(--brand-accent-foreground)" }}
               >
                 <RotateCcw className="size-4" /> Nghe lại
@@ -604,14 +804,14 @@ export function WfdListenPractice({
               <button
                 type="button"
                 onClick={() => setPhase("setup")}
-                className="rounded-[10px] border px-6 py-2.5 text-sm font-bold"
+                className="rounded-[10px] border px-6 py-2.5 text-[15px] font-bold"
                 style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
               >
                 Đổi cài đặt
               </button>
               <Link
                 href={backHref}
-                className="rounded-[10px] border px-6 py-2.5 text-sm font-bold"
+                className="rounded-[10px] border px-6 py-2.5 text-[15px] font-bold"
                 style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
               >
                 Quay lại danh sách câu hỏi

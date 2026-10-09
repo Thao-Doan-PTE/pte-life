@@ -48,7 +48,7 @@ export function LoginForm() {
       <Button
         type="submit"
         disabled={isPending}
-        className="mt-1 bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent/90"
+        className="mt-1 bg-primary text-primary-foreground hover:bg-primary/90"
       >
         {isPending ? "Đang đăng nhập..." : "Đăng nhập"}
       </Button>

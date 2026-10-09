@@ -6,7 +6,7 @@ export function ResultPlaceholder() {
     <Card className="border-primary/30 bg-primary/5">
       <CardContent className="flex items-start gap-3">
         <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
-        <div className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1 text-[15px]">
           <p className="font-medium">Đã ghi nhận câu trả lời</p>
           <p className="text-muted-foreground">
             Chấm điểm tự động (rule-based cho trắc nghiệm/điền từ, AI cho

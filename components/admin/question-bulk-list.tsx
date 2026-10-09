@@ -10,6 +10,7 @@ interface QuestionRow {
   id: string;
   code: string;
   availableIn: string[];
+  bank: "PTE" | "TU";
   createdAt: string;
 }
 
@@ -83,6 +84,13 @@ export function QuestionBulkList({
             />
             <div className="min-w-0 flex-1">
               <span className="font-medium">{q.code}</span>{" "}
+              <span
+                className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                  q.bank === "TU" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {q.bank === "TU" ? "Tủ" : "PTE"}
+              </span>{" "}
               <span className="text-xs text-muted-foreground">
                 {q.availableIn.join(", ")} · {formatDate(q.createdAt)}
               </span>

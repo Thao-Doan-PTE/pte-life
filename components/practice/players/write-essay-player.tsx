@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TappableText } from "@/components/practice/tappable-text";
 import { WritingEditor } from "@/components/practice/writing-editor";
 import { WritingReview } from "@/components/practice/review/writing-review";
 import { ScoreResultBanner } from "@/components/practice/review/score-result-banner";
@@ -51,8 +52,8 @@ export function WriteEssayPlayer({
   if (result && submittedText) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
-          {prompt}
+        <p className="font-passage rounded-xl border bg-card p-4 text-[17px] leading-[1.8] text-muted-foreground">
+          <TappableText text={prompt} />
         </p>
         <WritingReview studentText={submittedText} grade={result.grade} />
         <ScoreResultBanner
@@ -67,7 +68,9 @@ export function WriteEssayPlayer({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="rounded-xl border bg-card p-4 text-sm">{prompt}</p>
+      <p className="font-passage rounded-xl border bg-card p-4 text-[17px] leading-[1.8]">
+        <TappableText text={prompt} />
+      </p>
       <WritingEditor
         minWords={minWords}
         maxWords={maxWords}
@@ -83,7 +86,7 @@ export function WriteEssayPlayer({
         {isGrading && <Loader2 className="size-4 animate-spin" />}
         {isGrading ? "Đang chấm điểm bằng AI..." : "Nộp bài"}
       </Button>
-      {error && <p className="text-center text-sm text-destructive">{error}</p>}
+      {error && <p className="text-center text-[15px] text-destructive">{error}</p>}
     </div>
   );
 }

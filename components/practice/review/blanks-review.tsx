@@ -18,7 +18,7 @@ export function BlanksReview({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="whitespace-pre-line rounded-xl border bg-card p-4 text-base leading-loose">
+      <p className="whitespace-pre-line rounded-xl border bg-card p-4 text-[15px] leading-loose">
         {segments.map((seg, i) =>
           seg.type === "text" ? (
             <span key={i}>{seg.value}</span>
@@ -26,7 +26,7 @@ export function BlanksReview({
             <span
               key={i}
               className={cn(
-                "mx-1 inline-block rounded px-1.5 py-0.5 text-sm",
+                "mx-1 inline-block rounded px-1.5 py-0.5 text-[15px]",
                 isBlankCorrect(seg.id!)
                   ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                   : "bg-destructive/10 text-destructive"
@@ -38,7 +38,7 @@ export function BlanksReview({
         )}
       </p>
       {blanks.some((s) => !isBlankCorrect(s.id!)) && (
-        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+        <div className="flex flex-col gap-1 text-[13px] text-muted-foreground">
           {blanks.map(
             (s, i) =>
               !isBlankCorrect(s.id!) && (

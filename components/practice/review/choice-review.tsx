@@ -22,7 +22,7 @@ export function ChoiceReview({
           <div
             key={i}
             className={cn(
-              "flex items-center gap-3 rounded-lg border px-3 py-2 text-sm",
+              "flex items-center gap-3 rounded-lg border px-3 py-2 text-[15px]",
               isCorrect && "border-emerald-500/40 bg-emerald-500/5",
               isSelected && !isCorrect && "border-destructive/40 bg-destructive/5"
             )}

@@ -10,7 +10,7 @@ export function RandomizeToggle({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <div className="flex rounded-lg border p-0.5 text-sm">
+    <div className="flex rounded-lg border p-0.5 text-[15px]">
       <button
         type="button"
         onClick={() => onChange(false)}

@@ -4,11 +4,12 @@ import { auth } from "@/auth";
 import { AppShell } from "@/components/layout/app-shell";
 import { AdminUserRow } from "@/components/admin/admin-user-row";
 import { getAllUsersForAdmin, getRecentReservationLogs } from "@/lib/actions/admin";
+import { isAdmin } from "@/lib/auth-helpers";
 import { formatRelativeOrDate } from "@/lib/format";
 
 export default async function AdminPage() {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user || !isAdmin(session.user)) {
     redirect("/");
   }
 
@@ -27,12 +28,26 @@ export default async function AdminPage() {
               Trang nội bộ cho đội vận hành/CSKH PTE-Life.
             </p>
           </div>
-          <Link
-            href="/admin/questions"
-            className="rounded-lg border px-3 py-1.5 text-sm font-medium text-primary hover:bg-muted"
-          >
-            Quản lý ngân hàng đề →
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/admin/users"
+              className="rounded-lg border px-3 py-1.5 text-sm font-medium text-primary hover:bg-muted"
+            >
+              Người dùng →
+            </Link>
+            <Link
+              href="/admin/classes"
+              className="rounded-lg border px-3 py-1.5 text-sm font-medium text-primary hover:bg-muted"
+            >
+              Lớp học →
+            </Link>
+            <Link
+              href="/admin/questions"
+              className="rounded-lg border px-3 py-1.5 text-sm font-medium text-primary hover:bg-muted"
+            >
+              Quản lý ngân hàng đề →
+            </Link>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">

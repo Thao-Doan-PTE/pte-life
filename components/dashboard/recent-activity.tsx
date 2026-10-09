@@ -12,15 +12,15 @@ export function RecentActivity({ attempts }: { attempts: RecentAttempt[] }) {
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Luyện gần đây</h2>
+        <h2 className="text-[20px] font-semibold">Luyện gần đây</h2>
         <Link
           href="/history"
-          className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          className="flex items-center gap-1 text-[15px] font-medium text-primary hover:underline"
         >
           Xem tất cả <ArrowRight className="size-3.5" />
         </Link>
       </div>
-      <div className="flex flex-col divide-y rounded-xl border bg-card">
+      <div className="flex flex-col divide-y rounded-xl bg-card shadow-md">
         {attempts.map((attempt) => {
           const type = QUESTION_TYPES.find(
             (q) => q.id === attempt.questionTypeId
@@ -29,7 +29,7 @@ export function RecentActivity({ attempts }: { attempts: RecentAttempt[] }) {
             <Link
               key={attempt.id}
               href={`/practice/${attempt.skill}/${attempt.questionTypeId}`}
-              className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted"
+              className="flex items-center justify-between gap-3 px-4 py-3 text-[15px] transition-colors hover:bg-muted"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <Badge variant="secondary" className="shrink-0">
@@ -39,7 +39,7 @@ export function RecentActivity({ attempts }: { attempts: RecentAttempt[] }) {
                   <p className="truncate font-medium">
                     {type?.name ?? attempt.questionTypeId}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[13px] text-muted-foreground">
                     {attempt.questionCode}
                   </p>
                 </div>
@@ -48,7 +48,7 @@ export function RecentActivity({ attempts }: { attempts: RecentAttempt[] }) {
                 <span className={`font-semibold ${scoreColorClass(attempt.scorePct)}`}>
                   {attempt.scorePct}%
                 </span>
-                <span className="hidden text-xs text-muted-foreground sm:inline">
+                <span className="hidden text-[13px] text-muted-foreground sm:inline">
                   {formatRelativeOrDate(attempt.attemptedAt)}
                 </span>
               </div>

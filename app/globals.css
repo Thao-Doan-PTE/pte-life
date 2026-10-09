@@ -7,9 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-google-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-heading: var(--font-google-sans);
+  --font-passage: var(--font-lexend), var(--font-google-sans), system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -94,7 +95,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: #1a1a1a;
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #ea222a;
+  --primary: #d6474c;
   --primary-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -107,7 +108,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: #ea222a;
+  --ring: #d6474c;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -142,7 +143,7 @@
  * lại --primary/--brand-accent sang các giá trị --wfd-red/--wfd-navy này.
  */
 .wfd-theme {
-  --wfd-bg: #f9f8f6;
+  --wfd-bg: #f7f9fb;
   --wfd-surface: #ffffff;
   --wfd-surface-2: #fcfbfd;
   --wfd-border: #ece8f2;
@@ -160,17 +161,22 @@
   --wfd-green-tint: #e3f5ea;
   --wfd-amber: #b45309;
   --wfd-amber-tint: #fef3c7;
+  --wfd-amber-tint-border: #fde68a;
+  --wfd-amber-heading: #78350f;
+  --wfd-amber-text: #92400e;
   --wfd-black-sem: #14121a;
   --wfd-black-tint: #eceaef;
-  --wfd-code-bg: #f3f1f7;
+  --wfd-code-bg: #f3f5f7;
   --wfd-secondary-border: var(--wfd-red);
   --wfd-secondary-text: var(--wfd-red-dark);
-  background: var(--wfd-bg);
+  --wfd-page-bg: #ffffff;
+  background: var(--wfd-page-bg);
   color: var(--wfd-ink);
-  font-family: var(--font-wfd-heading), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-google-sans), system-ui, -apple-system, sans-serif;
 }
 
 .dark .wfd-theme {
+  --wfd-page-bg: #000000;
   --wfd-bg: #000000;
   --wfd-surface: #1a1a1a;
   --wfd-surface-2: #1f1f1f;
@@ -189,6 +195,9 @@
   --wfd-green-tint: #16301f;
   --wfd-amber: #fbbf24;
   --wfd-amber-tint: #3f2d0e;
+  --wfd-amber-tint-border: #78350f;
+  --wfd-amber-heading: #fbbf24;
+  --wfd-amber-text: #d4a656;
   --wfd-black-sem: #f2f2f2;
   --wfd-black-tint: #2a2a2a;
   --wfd-code-bg: #262626;
@@ -196,8 +205,92 @@
   --wfd-secondary-text: #ffffff;
 }
 
+/* Một vài màn hình (VD: Luyện nghe) cố tình giữ nền sáng/ấm dù toàn site đang
+ * ở dark mode — ghi đè lại toàn bộ token màu về đúng bản light bên trong
+ * .wfd-force-light, đặt sau khối .dark .wfd-theme để thắng khi cả 2 class
+ * cùng áp dụng (specificity bằng nhau, thứ tự khai báo quyết định). */
+.wfd-theme .wfd-force-light {
+  --wfd-bg: #f7f9fb;
+  --wfd-surface: #ffffff;
+  --wfd-surface-2: #fcfbfd;
+  --wfd-border: #ece8f2;
+  --wfd-ink: #1b1830;
+  --wfd-muted: #6b6880;
+  --wfd-muted-2: #8b87a0;
+  --wfd-red: #e4222b;
+  --wfd-red-dark: #b81620;
+  --wfd-red-tint: #fdecec;
+  --wfd-red-tint-border: #f6c9ca;
+  --wfd-navy: #14123d;
+  --wfd-navy-tint: #e7e9f5;
+  --wfd-navy-tint-2: #eef0fa;
+  --wfd-green: #15803d;
+  --wfd-green-tint: #e3f5ea;
+  --wfd-amber: #b45309;
+  --wfd-amber-tint: #fef3c7;
+  --wfd-amber-tint-border: #fde68a;
+  --wfd-amber-heading: #78350f;
+  --wfd-amber-text: #92400e;
+  --wfd-black-sem: #14121a;
+  --wfd-black-tint: #eceaef;
+  --wfd-code-bg: #f3f5f7;
+  --wfd-secondary-border: var(--wfd-red);
+  --wfd-secondary-text: var(--wfd-red-dark);
+  background: var(--wfd-bg);
+  color: var(--wfd-ink);
+}
+
 .wfd-mono {
   font-family: var(--font-wfd-mono), ui-monospace, monospace;
+}
+
+/* Bảng màu v3 cho trang chủ LMS (Header/Rail/Stage) — theo gói bàn giao
+ * docs/pte-life-design-handoff (tokens/tokens.css), quy tắc 60-30-10: nền kem
+ * + chữ nâu than (charcoal, KHÔNG dùng navy/xanh dương vì thương hiệu mệnh
+ * Hỏa) + đỏ thương hiệu chỉ cho CTA/trạng thái active. Khoá cứng, KHÔNG đổi
+ * theo .dark của site (không có khối `.dark .rail-theme` ghi đè các biến này). */
+.rail-theme {
+  --rail-bg: #ffffff;
+  --rail-surface: #f3ece6;
+  --rail-surface-card: #faf6f2;
+  --rail-charcoal: #2b2120;
+  --rail-charcoal-2: #463733;
+  --rail-on-charcoal: #f3ece6;
+  --rail-on-charcoal-dim: #bfb1a8;
+  --rail-ink: #2b2120;
+  --rail-ink-dim: #6b5e58;
+  --rail-line: #e7ddd5;
+  --rail-rule-dark: rgba(255, 255, 255, 0.2);
+  --rail-red: #d32f2f;
+  --rail-red-hover: #b71c1c;
+  --rail-red-active: #9b1b1b;
+  --rail-red-text: #b71c1c;
+  --rail-red-tint: #fdecea;
+  --rail-red-soft: #f5c6c3;
+  --rail-ok: #2e7d32;
+  --rail-ok-tint: #e7f5ee;
+  --rail-warning: #ef6c00;
+  --rail-warning-tint: #ffe0b2;
+  --rail-info: #6a3d9a;
+  --rail-cta-text: #ffffff;
+  --rail-focus-ring: #d32f2f;
+  background: var(--rail-bg);
+  color: var(--rail-ink);
+}
+
+.rail-theme *:focus-visible {
+  outline: 2px solid var(--rail-focus-ring);
+  outline-offset: 2px;
+}
+
+.rail-ghost-btn {
+  color: var(--rail-charcoal);
+  border-color: var(--rail-charcoal);
+  background: transparent;
+}
+.rail-ghost-btn:hover {
+  background: var(--rail-charcoal);
+  color: var(--rail-cta-text);
 }
 
 @keyframes wave {
@@ -227,4 +320,58 @@
   display: inline-block;
   transform-origin: 70% 70%;
   animation: wave 1.8s ease-in-out 1;
+}
+/* Nút kêu gọi hành động: vòng sáng đỏ lan nhẹ + mũi tên nhích — thu hút bấm mà không gây khó chịu */
+@keyframes cta-pulse {
+  0% {
+    box-shadow: 0 6px 14px -4px rgba(43, 33, 32, 0.35), 0 0 0 0 rgba(211, 47, 47, 0.45);
+  }
+  70%,
+  100% {
+    box-shadow: 0 6px 14px -4px rgba(43, 33, 32, 0.35), 0 0 0 14px rgba(211, 47, 47, 0);
+  }
+}
+
+@keyframes cta-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-cta-pulse {
+  animation: cta-pulse 2s ease-out infinite;
+}
+
+.animate-cta-nudge {
+  display: inline-block;
+  animation: cta-nudge 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-cta-pulse,
+  .animate-cta-nudge {
+    animation: none;
+  }
+}
+
+/* Rê chuột vào ô trong .hover-lift-group: ô nổi bật lên */
+.hover-lift-group [data-card] {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift-group [data-card]:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 26px 50px -18px rgba(43, 33, 32, 0.42), 0 6px 14px rgba(43, 33, 32, 0.12) !important;
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-lift-group [data-card] {
+    transition: none;
+  }
 }

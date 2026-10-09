@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import type { QuestionBank } from "@/lib/generated/prisma/client";
 
 const WFD_TYPE_ID = "write-from-dictation";
 
-export async function getWfdQuestions() {
+export async function getWfdQuestions(bank?: QuestionBank) {
   return prisma.question.findMany({
-    where: { questionTypeId: WFD_TYPE_ID },
+    where: { questionTypeId: WFD_TYPE_ID, ...(bank ? { bank } : {}) },
     orderBy: { code: "asc" },
   });
 }

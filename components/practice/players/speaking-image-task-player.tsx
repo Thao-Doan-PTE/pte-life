@@ -59,7 +59,7 @@ export function SpeakingImageTaskPlayer({
         {isGrading && <Loader2 className="size-4 animate-spin" />}
         {isGrading ? "Đang chấm điểm bằng AI..." : "Nộp bài"}
       </Button>
-      {error && <p className="text-center text-sm text-destructive">{error}</p>}
+      {error && <p className="text-center text-[15px] text-destructive">{error}</p>}
     </div>
   );
 }

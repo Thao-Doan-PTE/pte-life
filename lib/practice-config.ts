@@ -18,6 +18,11 @@ export const AUDIO_TASK_TYPE_IDS = new Set([
   "summarize-group-discussion",
 ]);
 
+/** Các dạng dùng header redesign mới (icon vuông + ô hướng dẫn cam + hàng badge)
+ * dù không dùng chung player nghe-trước-rồi-ghi-âm — hiện chỉ thêm Read Aloud
+ * theo yêu cầu, không tự lan ra Describe Image/Respond to Situation. */
+export const NEW_HEADER_TYPE_IDS = new Set([...AUDIO_TASK_TYPE_IDS, "read-aloud"]);
+
 /**
  * Hướng dẫn thời gian/luật làm bài theo từng dạng câu hỏi. Số giây/số từ ở đây là
  * ƯỚC LƯỢNG theo cấu trúc bài thi PTE công khai — cần đội nội dung PTE-Life xác nhận

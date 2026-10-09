@@ -23,7 +23,7 @@ export function ListeningWritingPlayer({
   maxWords: number;
   timeLimitSeconds: number;
 }) {
-  const [hasPlayed, setHasPlayed] = useState(false);
+  const [, setHasPlayed] = useState(false);
   const [text, setText] = useState("");
   const [submittedText, setSubmittedText] = useState<string | null>(null);
   const [isGrading, setIsGrading] = useState(false);
@@ -67,26 +67,22 @@ export function ListeningWritingPlayer({
   return (
     <div className="flex flex-col gap-4">
       <SingleAudioPlayer audioUrl={audioUrl} onEnded={() => setHasPlayed(true)} />
-      {hasPlayed && (
-        <>
-          <WritingEditor
-            minWords={minWords}
-            maxWords={maxWords}
-            timeLimitSeconds={timeLimitSeconds}
-            disabled={isGrading}
-            onTextChange={setText}
-          />
-          <Button
-            className="w-fit self-center gap-2 bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent/90"
-            disabled={isGrading || text.trim().length === 0}
-            onClick={handleSubmit}
-          >
-            {isGrading && <Loader2 className="size-4 animate-spin" />}
-            {isGrading ? "Đang chấm điểm bằng AI..." : "Nộp bài"}
-          </Button>
-        </>
-      )}
-      {error && <p className="text-center text-sm text-destructive">{error}</p>}
+      <WritingEditor
+        minWords={minWords}
+        maxWords={maxWords}
+        timeLimitSeconds={timeLimitSeconds}
+        disabled={isGrading}
+        onTextChange={setText}
+      />
+      <Button
+        className="w-fit self-center gap-2 bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent/90"
+        disabled={isGrading || text.trim().length === 0}
+        onClick={handleSubmit}
+      >
+        {isGrading && <Loader2 className="size-4 animate-spin" />}
+        {isGrading ? "Đang chấm điểm bằng AI..." : "Nộp bài"}
+      </Button>
+      {error && <p className="text-center text-[15px] text-destructive">{error}</p>}
     </div>
   );
 }

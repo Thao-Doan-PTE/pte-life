@@ -4,10 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Headphones } from "lucide-react";
 import { WfdAudioCard } from "@/components/wfd/wfd-audio-card";
-import { WfdBankCard, WfdTipsCard, WfdPearsonCard } from "@/components/wfd/wfd-sidebar-cards";
+import { WfdTipsCard } from "@/components/wfd/wfd-sidebar-cards";
+import { ExamSimulationToggle } from "@/components/practice/exam-simulation-toggle";
 import { WfdResultScreen } from "@/components/wfd/wfd-result-screen";
 import { submitAttemptAction, getPreviousAttemptScore } from "@/lib/actions/practice";
 import { FavoriteStarButton } from "@/components/practice/favorite-star-button";
+import { DifficultyBadge } from "@/components/practice/difficulty-badge";
+import { SKILL_ACCENT_COLOR } from "@/lib/question-types";
+import { classifyDifficulty } from "@/lib/difficulty";
 import type { ScoreResult } from "@/lib/scoring/types";
 
 export function WfdPlayScreen({
@@ -17,7 +21,6 @@ export function WfdPlayScreen({
   prevHref,
   nextHref,
   listHref,
-  streakDays,
   questionNumber,
   total,
   isFavorited,
@@ -28,7 +31,6 @@ export function WfdPlayScreen({
   prevHref: string | null;
   nextHref: string | null;
   listHref: string;
-  streakDays: number;
   questionNumber: number;
   total: number;
   isFavorited: boolean;
@@ -48,6 +50,7 @@ export function WfdPlayScreen({
 
   const wordCount = answer.trim().length === 0 ? 0 : answer.trim().split(/\s+/).length;
   const firstWord = sentence.trim().split(/\s+/)[0]?.replace(/[.,!?;:]/g, "");
+  const difficulty = classifyDifficulty("write-from-dictation", sentence);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -88,139 +91,124 @@ export function WfdPlayScreen({
   }
 
   return (
-    <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-8 px-5 py-8 sm:px-10 lg:grid-cols-[1fr_320px]">
+    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-5 py-8 sm:px-10 lg:grid-cols-[1fr_320px]">
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
             href={listHref}
-            className="flex items-center gap-1 text-sm font-medium"
+            className="flex items-center gap-1 text-[15px] font-normal"
             style={{ color: "var(--wfd-muted)" }}
           >
             <ArrowLeft className="size-4" /> Danh sách câu hỏi
           </Link>
-          <div className="flex items-center gap-2">
-            <span
-              className="wfd-mono flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold"
-              style={{ background: "#FFF1E0", color: "#C2410C" }}
-            >
-              🔥 {streakDays} ngày liên tiếp
-            </span>
-            <span
-              className="wfd-mono rounded-full px-3 py-1 text-xs font-bold"
-              style={{ background: "var(--wfd-code-bg)", color: "var(--wfd-ink)" }}
-            >
-              Câu {questionNumber} / {total}
-            </span>
-          </div>
+          <span
+            className="wfd-mono rounded-full px-3 py-1 text-[13px] font-bold"
+            style={{ background: "var(--wfd-code-bg)", color: "var(--wfd-ink)" }}
+          >
+            Câu {questionNumber} / {total}
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
           <div
-            className="flex size-14 shrink-0 items-center justify-center rounded-2xl text-lg font-extrabold text-white"
-            style={{ background: "#0d9488" }}
+            className="flex size-12 shrink-0 items-center justify-center rounded-lg text-[17px] font-extrabold text-white"
+            style={{ background: SKILL_ACCENT_COLOR.listening }}
           >
             WFD
           </div>
-          <h1 className="text-2xl font-bold sm:text-[26px]">Write From Dictation</h1>
+          <h1 className="text-2xl font-bold sm:text-2xl">Write From Dictation</h1>
         </div>
 
         <div
-          className="flex items-start gap-2.5 rounded-lg border-t-2 px-4 py-3 text-sm font-medium"
+          className="flex items-start gap-2.5 rounded-lg border-t-2 px-4 py-3 text-[15px] font-medium"
           style={{ borderColor: "#f59e0b", background: "var(--wfd-code-bg)", color: "var(--wfd-ink)" }}
         >
           <Headphones className="mt-0.5 size-4 shrink-0" style={{ color: "#f59e0b" }} />
           <p>Nghe đoạn ghi âm và gõ lại chính xác câu bạn vừa nghe — nghe 1 lần duy nhất, viết lại đầy đủ và chính xác.</p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4" style={{ borderColor: "var(--wfd-border)" }}>
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className="wfd-mono rounded-full px-3 py-1 text-xs font-bold"
-              style={{ background: "var(--wfd-black-tint)", color: "var(--wfd-ink)" }}
-            >
-              #{questionCode}
-            </span>
-            <span
-              className="rounded-full px-3 py-1 text-xs font-bold"
-              style={{ background: "var(--wfd-navy-tint)", color: "var(--wfd-navy)" }}
-            >
-              Write From Dictation
-            </span>
-            <span
-              className="rounded-full border px-3 py-1 text-xs font-bold"
-              style={{ borderColor: "#f59e0b", color: "#f59e0b" }}
-            >
-              Trung bình
-            </span>
+        <div
+          className="flex flex-col gap-4 rounded-2xl border p-5"
+          style={{ background: "var(--wfd-surface)", borderColor: "var(--wfd-border)" }}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-4" style={{ borderColor: "var(--wfd-border)" }}>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="wfd-mono rounded-full px-3 py-1 text-[13px] font-bold"
+                style={{ background: "var(--wfd-black-tint)", color: "var(--wfd-ink)" }}
+              >
+                #{questionCode}
+              </span>
+              <DifficultyBadge level={difficulty} />
+            </div>
+            <FavoriteStarButton questionId={questionId} initialFavorited={isFavorited} />
           </div>
-          <FavoriteStarButton questionId={questionId} initialFavorited={isFavorited} />
-        </div>
 
-        <WfdAudioCard sentence={sentence} onPlayed={() => setHasPlayed(true)} />
+          <WfdAudioCard sentence={sentence} onPlayed={() => setHasPlayed(true)} />
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-semibold" htmlFor="wfd-answer">
-            Nhập câu trả lời của bạn
-          </label>
-          <textarea
-            id="wfd-answer"
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Gõ lại chính xác câu bạn vừa nghe được... (Viết hoa chữ cái đầu và kết thúc bằng dấu chấm)"
-            className="min-h-[132px] resize-y rounded-xl border p-3 text-sm outline-none"
-            style={{
-              background: "var(--wfd-surface)",
-              borderColor: "var(--wfd-border)",
-              color: "var(--wfd-ink)",
-            }}
-          />
-          <div className="flex justify-end">
-            <span className="wfd-mono text-xs" style={{ color: "var(--wfd-muted-2)" }}>
-              Số từ: {wordCount}
-            </span>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[15px] font-semibold" htmlFor="wfd-answer">
+              Nhập câu trả lời của bạn
+            </label>
+            <textarea
+              id="wfd-answer"
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              placeholder="Gõ lại chính xác câu bạn vừa nghe được... (Viết hoa chữ cái đầu và kết thúc bằng dấu chấm)"
+              className="font-passage min-h-[132px] resize-y rounded-xl border p-3 text-[17px] leading-relaxed outline-none"
+              style={{
+                background: "var(--wfd-bg)",
+                borderColor: "var(--wfd-border)",
+                color: "var(--wfd-ink)",
+              }}
+            />
+            <div className="flex justify-end">
+              <span className="wfd-mono text-[13px]" style={{ color: "var(--wfd-muted-2)" }}>
+                Số từ: {wordCount}
+              </span>
+            </div>
           </div>
-        </div>
 
-        {showHint && firstWord && (
-          <p className="text-xs" style={{ color: "var(--wfd-muted)" }}>
-            Gợi ý: câu bắt đầu bằng từ &quot;{firstWord}&quot;
-          </p>
-        )}
+          {showHint && firstWord && (
+            <p className="text-[13px]" style={{ color: "var(--wfd-muted)" }}>
+              Gợi ý: câu bắt đầu bằng từ &quot;{firstWord}&quot;
+            </p>
+          )}
+
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setShowHint(true)}
+              disabled={!hasPlayed}
+              className="rounded-[10px] border px-5 py-2.5 text-[15px] font-semibold disabled:opacity-50"
+              style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-navy)" }}
+            >
+              Gợi ý
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={answer.trim().length === 0 || isSubmitting}
+              className="flex items-center gap-2 rounded-[10px] px-6 py-2.5 text-[15px] font-bold disabled:opacity-50"
+              style={{ background: "var(--brand-accent)", color: "var(--brand-accent-foreground)" }}
+            >
+              {isSubmitting ? "Đang chấm..." : "Nộp bài"} <ArrowRight className="size-4" />
+            </button>
+          </div>
+          {error && (
+            <p className="text-[15px]" style={{ color: "var(--wfd-red-dark)" }}>
+              {error}
+            </p>
+          )}
+        </div>
 
         <div
-          className="rounded-xl p-4 text-sm leading-relaxed"
+          className="rounded-xl p-4 text-[13px] leading-relaxed"
           style={{ background: "var(--wfd-navy-tint-2)", color: "var(--wfd-navy)" }}
         >
-          💡 <strong>Cách chấm điểm:</strong> Mỗi từ đúng vị trí được 1 điểm, từ thừa
-          không bị trừ điểm. Hệ thống tự động chuẩn hoá chữ hoa/thường và dấu câu
-          trước khi so khớp với đáp án gốc.
+          ** <strong>Lưu ý:</strong> Mỗi từ đúng vị trí được 1 điểm, từ thừa không bị
+          trừ điểm. Kiểm tra kỹ lỗi gõ/ngữ pháp trước khi nộp bài!
         </div>
-
-        <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => setShowHint(true)}
-            disabled={!hasPlayed}
-            className="rounded-[10px] border px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
-            style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-navy)" }}
-          >
-            Gợi ý
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!hasPlayed || answer.trim().length === 0 || isSubmitting}
-            className="flex items-center gap-2 rounded-[10px] px-6 py-2.5 text-sm font-bold disabled:opacity-50"
-            style={{ background: "var(--brand-accent)", color: "var(--brand-accent-foreground)" }}
-          >
-            {isSubmitting ? "Đang chấm..." : "Nộp bài"} <ArrowRight className="size-4" />
-          </button>
-        </div>
-        {error && (
-          <p className="text-sm" style={{ color: "var(--wfd-red-dark)" }}>
-            {error}
-          </p>
-        )}
 
         <div
           className="flex items-center justify-between border-t pt-4"
@@ -229,8 +217,8 @@ export function WfdPlayScreen({
           {prevHref ? (
             <Link
               href={prevHref}
-              className="flex items-center gap-1 text-sm font-semibold"
-              style={{ color: "var(--wfd-muted)" }}
+              className="flex items-center gap-1 rounded-lg border px-4 py-2 text-[15px] font-semibold transition-colors hover:bg-[var(--wfd-bg)]"
+              style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-muted)", background: "var(--wfd-surface)" }}
             >
               <ChevronLeft className="size-4" /> Câu trước
             </Link>
@@ -240,10 +228,10 @@ export function WfdPlayScreen({
           {nextHref ? (
             <Link
               href={nextHref}
-              className="flex items-center gap-1 text-sm font-semibold"
-              style={{ color: "var(--wfd-muted)" }}
+              className="flex items-center gap-1 rounded-lg border px-4 py-2 text-[15px] font-semibold transition-colors hover:bg-[var(--wfd-bg)]"
+              style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-muted)", background: "var(--wfd-surface)" }}
             >
-              Câu sau <ChevronRight className="size-4" />
+              Câu tiếp theo <ChevronRight className="size-4" />
             </Link>
           ) : (
             <span />
@@ -252,21 +240,39 @@ export function WfdPlayScreen({
       </div>
 
       <div className="flex flex-col gap-4">
-        <WfdBankCard
-          typeName="Write From Dictation"
-          title="Về dạng bài WFD"
-          description="Write From Dictation chiếm khoảng 5% Overall, 13% Listening và 23% Writing. Đây là dạng bài dễ ăn điểm nhất nếu luyện tập đều đặn — chỉ cần nghe kỹ và gõ đúng thứ tự từ."
-        />
+        <ExamSimulationToggle questionTypeId="write-from-dictation" />
         <WfdTipsCard
+          title="MẸO LÀM BÀI WFD"
           tips={[
-            "Ghi chú nhanh các từ khoá (danh từ, động từ) ngay khi nghe, chưa cần đúng chính tả.",
-            "Ưu tiên đúng thứ tự từ hơn là cố nhớ đúng từng chữ cái.",
-            "Đừng bỏ sót mạo từ (a, an, the) và giới từ ngắn — rất dễ mất điểm.",
-            "Viết hoa chữ cái đầu câu và thêm dấu chấm cuối câu.",
-            "Nếu không chắc chính tả, cứ viết theo cách phát âm rồi rà lại trước khi nộp.",
+            <span key="1">
+              <b>Ghi nháp chữ cái đầu:</b> Dùng bảng, giấy nháp viết nhanh ký tự đầu từng từ khi nghe.
+            </span>,
+            <span key="2">
+              <b>Chú ý từ nhỏ & âm đuôi:</b> Chấm điểm theo từ đúng; nghe kỹ mạo từ, giới từ, đuôi -s/-es/-ed.
+            </span>,
+            <span key="3">
+              <b>Thống nhất chính tả:</b> Gõ toàn bộ câu theo duy nhất một chuẩn tiếng Anh (Anh - Anh hoặc Anh - Mỹ).
+            </span>,
           ]}
         />
-        <WfdPearsonCard />
+        <div
+          className="flex flex-col gap-1 rounded-xl border p-4"
+          style={{ background: "var(--wfd-surface)", borderColor: "var(--wfd-border)" }}
+        >
+          <p className="text-[13px] font-semibold">Phím tắt</p>
+          <p className="flex items-center gap-1.5 text-[13px]" style={{ color: "var(--wfd-muted)" }}>
+            <span
+              className="wfd-mono rounded-md border px-1.5 py-0.5 text-[13px]"
+              style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)" }}
+            >
+              Space
+            </span>
+            Phát / nghe lại câu
+          </p>
+          <p className="text-[13px]" style={{ color: "var(--wfd-muted)" }}>
+            Bôi đen hoặc nhấp đúp một từ để tra nghĩa.
+          </p>
+        </div>
       </div>
     </div>
   );

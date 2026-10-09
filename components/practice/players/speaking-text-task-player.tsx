@@ -2,6 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TappableText } from "@/components/practice/tappable-text";
 import { SpeakingRecorderPlayer } from "@/components/practice/speaking-recorder";
 import { SpeakingReview } from "@/components/practice/review/speaking-review";
 import { ScoreResultBanner } from "@/components/practice/review/score-result-banner";
@@ -24,7 +25,9 @@ export function SpeakingTextTaskPlayer({
   if (result && recording) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="rounded-xl border bg-card p-4 text-sm">{situationText}</p>
+        <p className="font-passage rounded-xl border bg-card p-4 text-[17px] leading-[1.8]">
+          <TappableText text={situationText} />
+        </p>
         <SpeakingReview
           transcript={recording.transcript}
           wordsPerMinute={result.wordsPerMinute}
@@ -43,7 +46,9 @@ export function SpeakingTextTaskPlayer({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="rounded-xl border bg-card p-4 text-sm">{situationText}</p>
+      <p className="font-passage rounded-xl border bg-card p-4 text-[17px] leading-[1.8]">
+        <TappableText text={situationText} />
+      </p>
       <SpeakingRecorderPlayer
         prepSeconds={prepSeconds}
         recordSeconds={recordSeconds}
@@ -57,7 +62,7 @@ export function SpeakingTextTaskPlayer({
         {isGrading && <Loader2 className="size-4 animate-spin" />}
         {isGrading ? "Đang chấm điểm bằng AI..." : "Nộp bài"}
       </Button>
-      {error && <p className="text-center text-sm text-destructive">{error}</p>}
+      {error && <p className="text-center text-[15px] text-destructive">{error}</p>}
     </div>
   );
 }

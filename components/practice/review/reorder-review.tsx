@@ -21,7 +21,7 @@ export function ReorderReview({
             <div
               key={p.id}
               className={cn(
-                "flex items-center gap-3 rounded-lg border p-3 text-sm",
+                "flex items-center gap-3 rounded-lg border p-3 text-[15px]",
                 isRight
                   ? "border-emerald-500/40 bg-emerald-500/5"
                   : "border-destructive/40 bg-destructive/5"
@@ -40,11 +40,11 @@ export function ReorderReview({
 
       {!allCorrect && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-muted-foreground">
+          <p className="text-[13px] font-medium text-muted-foreground">
             Thứ tự đúng:
           </p>
           {correctOrder.map((id, i) => (
-            <p key={id} className="text-xs text-muted-foreground">
+            <p key={id} className="text-[13px] text-muted-foreground">
               {i + 1}. {byId.get(id)?.text}
             </p>
           ))}

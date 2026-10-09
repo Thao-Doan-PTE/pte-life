@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Google_Sans_Flex, Lexend } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const googleSansFlex = Google_Sans_Flex({
+  variable: "--font-google-sans",
+  subsets: ["latin", "latin-ext", "vietnamese"],
+});
+
+const lexend = Lexend({
+  variable: "--font-lexend",
+  subsets: ["latin", "vietnamese"],
 });
 
 const geistMono = Geist_Mono({
@@ -28,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="vi"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${googleSansFlex.variable} ${lexend.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider

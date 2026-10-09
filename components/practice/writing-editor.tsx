@@ -48,7 +48,7 @@ export function WritingEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between text-[15px]">
         <span
           className={
             isTimeUp
@@ -81,7 +81,7 @@ export function WritingEditor({
         className="min-h-[280px] resize-y"
       />
       {isTimeUp && (
-        <p className="text-sm text-destructive">
+        <p className="text-[15px] text-destructive">
           Đã hết thời gian làm bài. Bạn vẫn có thể nộp bài hiện tại.
         </p>
       )}

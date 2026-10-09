@@ -45,3 +45,6 @@ yarn-error.log*
 next-env.d.ts
 
 /lib/generated/prisma
+
+# user-uploaded files (avatars, recordings)
+/public/uploads/

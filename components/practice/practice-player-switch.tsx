@@ -2,7 +2,6 @@ import { ReadAloudPlayer } from "@/components/practice/players/read-aloud-player
 import { WriteEssayPlayer } from "@/components/practice/players/write-essay-player";
 import { ReadingMcqPlayer } from "@/components/practice/players/reading-mcq-player";
 import { ReadingMcqMultiPlayer } from "@/components/practice/players/reading-mcq-multi-player";
-import { DictationPlayer } from "@/components/practice/players/dictation-player";
 import { SpeakingAudioTaskPlayer } from "@/components/practice/players/speaking-audio-task-player";
 import { SpeakingImageTaskPlayer } from "@/components/practice/players/speaking-image-task-player";
 import { SpeakingTextTaskPlayer } from "@/components/practice/players/speaking-text-task-player";
@@ -239,14 +238,10 @@ export function renderPracticePlayer(
           />
         );
       break;
-    case "write-from-dictation":
-      if (typeof content.sentence === "string")
-        return <DictationPlayer questionId={questionId} sentence={content.sentence} />;
-      break;
   }
 
   return (
-    <p className="text-center text-sm text-muted-foreground">
+    <p className="text-center text-[15px] text-muted-foreground">
       Chưa hỗ trợ hiển thị nội dung cho dạng câu hỏi này.
     </p>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { TappableText } from "@/components/practice/tappable-text";
 import { cn } from "@/lib/utils";
 
 export function ChoiceQuestion({
@@ -34,13 +35,13 @@ export function ChoiceQuestion({
   return (
     <div className="flex flex-col gap-4">
       {passage && (
-        <p className="whitespace-pre-line rounded-xl border bg-card p-4 text-sm text-muted-foreground">
-          {passage}
+        <p className="font-passage whitespace-pre-line rounded-xl border bg-card p-4 text-[17px] leading-[1.8] text-muted-foreground">
+          <TappableText text={passage} />
         </p>
       )}
-      <p className="font-medium">{question}</p>
+      <p className="font-passage text-[17px] font-medium">{question}</p>
       {isMultiple && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[13px] text-muted-foreground">
           Chọn tối đa {maxSelectable} đáp án.
         </p>
       )}
@@ -51,7 +52,7 @@ export function ChoiceQuestion({
             <label
               key={i}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors",
+                "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-[15px] transition-colors",
                 isChecked ? "border-primary bg-primary/5" : "hover:bg-muted",
                 submitted && "cursor-default opacity-80"
               )}

@@ -27,12 +27,12 @@ export function ScoreResultBanner({
       ) : (
         <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600" />
       )}
-      <div className="flex flex-col gap-0.5 text-sm">
+      <div className="flex flex-col gap-0.5 text-[15px]">
         <p className="font-semibold">
           <span className={scoreColorClass(scorePct)}>{scorePct}% đúng</span>
           {" · "}Điểm PTE ước tính: {pteScore}/90
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[13px] text-muted-foreground">
           {method === "ai"
             ? "Chấm bằng AI"
             : "Chấm tự động (rule-based)"}{" "}

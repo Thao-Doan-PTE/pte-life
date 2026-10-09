@@ -21,7 +21,7 @@ export function BrandLogo() {
         alt="PTE-Life"
         width={2040}
         height={694}
-        className="h-7 w-auto"
+        className="h-9 w-auto"
         priority
       />
     </Link>

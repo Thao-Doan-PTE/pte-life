@@ -6,8 +6,10 @@ export type ExamPackage = "academic" | "core";
  * Bảng tỉ trọng chấm điểm (overallWeightPct / skillWeightPct / weighting) lấy từ
  * https://ptescoreup.com/student/practice/weighting — số liệu chính thức PTE Academic
  * (% đóng góp của từng dạng câu vào điểm Overall và vào từng điểm kỹ năng giao tiếp:
- * Listening/Reading/Speaking/Writing). Riêng phần PTE Core (availableIn) vẫn dựa theo
- * hiểu biết chung về cấu trúc bài thi — đội nội dung PTE-Life xác nhận lại nếu cần.
+ * Listening/Reading/Speaking/Writing). Riêng phần PTE Core (availableIn) đối chiếu theo
+ * danh sách dạng câu chính thức tại pearsonpte.com/pte-core/test-format — PTE Core CHƯA
+ * có "Write Email" (dạng Writing riêng của Core, thay cho Write Essay) trong hệ thống,
+ * cần bổ sung nội dung + player riêng nếu muốn hỗ trợ đầy đủ.
  */
 export interface QuestionTypeWeighting {
   overall: number;
@@ -17,6 +19,15 @@ export interface QuestionTypeWeighting {
   writing: number;
 }
 
+export type FrequencyTier = "SIEU" | "CAO" | "TB" | "THAP";
+
+export const FREQUENCY_TIER_LABEL: Record<FrequencyTier, string> = {
+  SIEU: "Siêu trọng tâm",
+  CAO: "Trọng tâm cao",
+  TB: "Trung bình",
+  THAP: "Thấp",
+};
+
 export interface QuestionType {
   id: string;
   skill: Skill;
@@ -24,6 +35,13 @@ export interface QuestionType {
   nameEn: string;
   /** Mã viết tắt chuẩn PTE, ví dụ "RA", "FIB-RW", "WFD". */
   code: string;
+  /** Mức độ thường gặp trong đề thi thật — đội học thuật PTE-Life biên tập thủ công
+   * theo kinh nghiệm luyện thi, không suy ra từ overallWeightPct (2 khái niệm khác
+   * nhau: trọng số điểm số vs. tần suất xuất hiện trong đề). Dạng PTE Core-only chưa
+   * có nội dung thật (write-email) thì để trống. */
+  frequencyTier?: FrequencyTier;
+  /** Dạng câu mới bổ sung vào ngân hàng đề — hiện viền xanh + nhãn "Mới" ở trang luyện tập. */
+  isNewType?: boolean;
   /** Mô tả ngắn gọn bằng tiếng Việt cho dạng câu hỏi. */
   descriptionVi: string;
   availableIn: ExamPackage[];
@@ -37,6 +55,13 @@ export const SKILL_LABELS: Record<Skill, string> = {
   writing: "Writing",
   reading: "Reading",
   listening: "Listening",
+};
+
+export const SKILL_LABELS_VI: Record<Skill, string> = {
+  listening: "Nghe",
+  speaking: "Nói",
+  reading: "Đọc",
+  writing: "Viết",
 };
 
 /** Màu nhấn riêng cho từng kỹ năng — đồng bộ với bảng màu 4 thẻ kỹ năng ở trang chủ
@@ -57,6 +82,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Read Aloud",
     nameEn: "Read Aloud",
     code: "RA",
+    frequencyTier: "CAO",
     descriptionVi: "Đọc to đoạn văn hiển thị trên màn hình",
     availableIn: ["academic", "core"],
     overallWeightPct: 4,
@@ -69,6 +95,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Repeat Sentence",
     nameEn: "Repeat Sentence",
     code: "RS",
+    frequencyTier: "CAO",
     descriptionVi: "Lặp lại câu nghe được",
     availableIn: ["academic", "core"],
     overallWeightPct: 7,
@@ -81,8 +108,9 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Describe Image",
     nameEn: "Describe Image",
     code: "DI",
+    frequencyTier: "TB",
     descriptionVi: "Miêu tả hình ảnh",
-    availableIn: ["academic"],
+    availableIn: ["academic", "core"],
     overallWeightPct: 15,
     skillWeightPct: 31,
     weighting: { overall: 15, listening: 0, reading: 0, speaking: 31, writing: 0 },
@@ -93,6 +121,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Retell Lecture",
     nameEn: "Retell Lecture",
     code: "RL",
+    frequencyTier: "TB",
     descriptionVi: "Kể lại bài giảng",
     availableIn: ["academic"],
     overallWeightPct: 6,
@@ -105,6 +134,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Answer Short Question",
     nameEn: "Answer Short Question",
     code: "ASQ",
+    frequencyTier: "THAP",
     descriptionVi: "Trả lời câu hỏi ngắn",
     availableIn: ["academic", "core"],
     overallWeightPct: 2,
@@ -117,8 +147,10 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Summarize Group Discussion",
     nameEn: "Summarize Group Discussion",
     code: "SGD",
+    frequencyTier: "TB",
+    isNewType: true,
     descriptionVi: "Tóm tắt thảo luận nhóm",
-    availableIn: ["core"],
+    availableIn: ["academic"],
     overallWeightPct: 9,
     skillWeightPct: 19,
     weighting: { overall: 9, listening: 20, reading: 0, speaking: 19, writing: 0 },
@@ -129,22 +161,25 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Respond to Situation",
     nameEn: "Respond to Situation",
     code: "RTS",
+    frequencyTier: "TB",
+    isNewType: true,
     descriptionVi: "Xử lý tình huống nói",
-    availableIn: ["core"],
+    availableIn: ["academic", "core"],
     overallWeightPct: 6,
     skillWeightPct: 13,
     weighting: { overall: 6, listening: 0, reading: 0, speaking: 13, writing: 0 },
   },
 
-  // Writing (2)
+  // Writing (3)
   {
     id: "summarize-written-text",
     skill: "writing",
     name: "Summarize Written Text",
     nameEn: "Summarize Written Text",
     code: "SWT",
+    frequencyTier: "TB",
     descriptionVi: "Tóm tắt văn bản bằng 1 câu viết",
-    availableIn: ["academic"],
+    availableIn: ["academic", "core"],
     overallWeightPct: 7,
     skillWeightPct: 28,
     weighting: { overall: 7, listening: 0, reading: 23, speaking: 0, writing: 28 },
@@ -155,11 +190,26 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Write Essay",
     nameEn: "Write Essay",
     code: "WE",
+    frequencyTier: "CAO",
     descriptionVi: "Viết luận",
     availableIn: ["academic"],
     overallWeightPct: 7,
     skillWeightPct: 31,
     weighting: { overall: 7, listening: 0, reading: 0, speaking: 0, writing: 31 },
+  },
+  {
+    id: "write-email",
+    skill: "writing",
+    name: "Write Email",
+    nameEn: "Write Email",
+    code: "WEM",
+    // Demo/placeholder — chưa có nội dung câu hỏi, player hay logic chấm AI riêng.
+    // Chỉ dựng tên + mã cho đủ danh sách 22 dạng bài của PTE Core, bổ sung chi tiết sau.
+    descriptionVi: "Viết email phản hồi tình huống cho trước (PTE Core)",
+    availableIn: ["core"],
+    overallWeightPct: null,
+    skillWeightPct: null,
+    weighting: null,
   },
 
   // Reading (5)
@@ -169,6 +219,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Fill in the Blanks (Dropdown)",
     nameEn: "Fill in the Blanks (Dropdown)",
     code: "FIB-RW",
+    frequencyTier: "CAO",
     descriptionVi: "Điền vào chỗ trống (cả Đọc và Viết)",
     availableIn: ["academic", "core"],
     overallWeightPct: 7,
@@ -181,6 +232,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Multiple Choice (Multiple Answer)",
     nameEn: "Multiple Choice (Multiple Answer)",
     code: "MCMA-R",
+    frequencyTier: "THAP",
     descriptionVi: "Trắc nghiệm nhiều đáp án đúng",
     availableIn: ["academic", "core"],
     overallWeightPct: 1,
@@ -193,6 +245,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Reorder Paragraphs",
     nameEn: "Reorder Paragraphs",
     code: "RO",
+    frequencyTier: "TB",
     descriptionVi: "Sắp xếp lại đoạn văn",
     availableIn: ["academic", "core"],
     overallWeightPct: 3,
@@ -205,6 +258,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Fill in the Blanks (Drag and Drop)",
     nameEn: "Fill in the Blanks (Drag and Drop)",
     code: "FIB-R",
+    frequencyTier: "CAO",
     descriptionVi: "Điền vào chỗ trống dạng kéo thả",
     availableIn: ["academic", "core"],
     overallWeightPct: 6,
@@ -217,6 +271,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Multiple Choice (Single Answer)",
     nameEn: "Multiple Choice (Single Answer)",
     code: "MCSA-R",
+    frequencyTier: "THAP",
     descriptionVi: "Trắc nghiệm một đáp án đúng",
     availableIn: ["academic", "core"],
     overallWeightPct: 0,
@@ -231,8 +286,9 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Summarize Spoken Text",
     nameEn: "Summarize Spoken Text",
     code: "SST",
+    frequencyTier: "TB",
     descriptionVi: "Tóm tắt đoạn ghi âm nghe được",
-    availableIn: ["academic"],
+    availableIn: ["academic", "core"],
     overallWeightPct: 4,
     skillWeightPct: 10,
     weighting: { overall: 4, listening: 10, reading: 0, speaking: 0, writing: 18 },
@@ -243,6 +299,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Multiple Choice (Multiple Answer)",
     nameEn: "Multiple Choice (Multiple Answer)",
     code: "MCMA-L",
+    frequencyTier: "THAP",
     descriptionVi: "Trắc nghiệm nghe nhiều đáp án đúng",
     availableIn: ["academic", "core"],
     overallWeightPct: 1,
@@ -255,6 +312,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Fill in the Blanks",
     nameEn: "Fill in the Blanks",
     code: "FIB-L",
+    frequencyTier: "TB",
     descriptionVi: "Điền từ còn thiếu vào ô trống khi nghe",
     availableIn: ["academic", "core"],
     overallWeightPct: 3,
@@ -267,6 +325,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Highlight Correct Summary",
     nameEn: "Highlight Correct Summary",
     code: "HCS",
+    frequencyTier: "THAP",
     descriptionVi: "Chọn bản tóm tắt đúng nhất",
     availableIn: ["academic"],
     overallWeightPct: 0,
@@ -279,6 +338,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Multiple Choice (Single Answer)",
     nameEn: "Multiple Choice (Single Answer)",
     code: "MCSA-L",
+    frequencyTier: "THAP",
     descriptionVi: "Trắc nghiệm nghe một đáp án đúng",
     availableIn: ["academic", "core"],
     overallWeightPct: 0,
@@ -291,8 +351,9 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Select Missing Word",
     nameEn: "Select Missing Word",
     code: "SMW",
+    frequencyTier: "THAP",
     descriptionVi: "Chọn từ bị thiếu ở cuối đoạn audio",
-    availableIn: ["academic"],
+    availableIn: ["academic", "core"],
     overallWeightPct: 1,
     skillWeightPct: 1,
     weighting: { overall: 1, listening: 1, reading: 0, speaking: 0, writing: 0 },
@@ -303,8 +364,9 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Highlight Incorrect Words",
     nameEn: "Highlight Incorrect Words",
     code: "HIW",
+    frequencyTier: "CAO",
     descriptionVi: "Chỉ ra từ đọc sai khác so với văn bản",
-    availableIn: ["academic"],
+    availableIn: ["academic", "core"],
     overallWeightPct: 4,
     skillWeightPct: 8,
     weighting: { overall: 4, listening: 8, reading: 13, speaking: 0, writing: 0 },
@@ -315,6 +377,7 @@ export const QUESTION_TYPES: QuestionType[] = [
     name: "Write from Dictation",
     nameEn: "Write from Dictation",
     code: "WFD",
+    frequencyTier: "SIEU",
     descriptionVi: "Nghe và viết lại câu",
     availableIn: ["academic", "core"],
     overallWeightPct: 5,

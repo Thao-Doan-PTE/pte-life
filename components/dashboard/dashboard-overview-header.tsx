@@ -36,7 +36,7 @@ export function DashboardOverviewHeader({
             </Avatar>
             <Badge
               variant={examPackage === "academic" ? "default" : "outline"}
-              className="px-2 py-0.5 text-[10px]"
+              className="px-2 py-0.5 text-xs"
             >
               {packageLabel}
             </Badge>

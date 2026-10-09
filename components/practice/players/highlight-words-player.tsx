@@ -18,7 +18,7 @@ export function HighlightWordsPlayer({
   audioUrl: string;
   words: string[];
 }) {
-  const [hasPlayed, setHasPlayed] = useState(false);
+  const [, setHasPlayed] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [submittedSelection, setSubmittedSelection] = useState<number[] | null>(null);
   const [result, setResult] = useState<ScoreResult | null>(null);
@@ -59,23 +59,19 @@ export function HighlightWordsPlayer({
   return (
     <div className="flex flex-col gap-4">
       <SingleAudioPlayer audioUrl={audioUrl} onEnded={() => setHasPlayed(true)} />
-      {hasPlayed && (
-        <>
-          <p className="text-xs text-muted-foreground">
-            Bấm vào những từ trong đoạn dưới đây mà bạn cho là KHÁC với audio
-            vừa nghe.
-          </p>
-          <HighlightWords words={words} onSelectionChange={setSelected} />
-          <Button
-            className="w-fit self-center bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent/90"
-            disabled={selected.length === 0}
-            onClick={handleSubmit}
-          >
-            Nộp bài
-          </Button>
-        </>
-      )}
-      {error && <p className="text-center text-sm text-destructive">{error}</p>}
+      <p className="text-[13px] text-muted-foreground">
+        Bấm vào những từ trong đoạn dưới đây mà bạn cho là KHÁC với audio
+        vừa nghe.
+      </p>
+      <HighlightWords words={words} onSelectionChange={setSelected} />
+      <Button
+        className="w-fit self-center bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent/90"
+        disabled={selected.length === 0}
+        onClick={handleSubmit}
+      >
+        Nộp bài
+      </Button>
+      {error && <p className="text-center text-[15px] text-destructive">{error}</p>}
     </div>
   );
 }

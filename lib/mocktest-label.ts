@@ -7,6 +7,7 @@ export function mockTestSessionLabel(session: {
   questionTypeId: string | null;
 }): string {
   if (session.mode === "full") return "Full Test";
+  if (session.mode === "tu") return "Thi thử Đề Tủ";
   if (session.mode === "section" && session.skill) {
     return `Section Test — ${SKILL_LABELS[session.skill as keyof typeof SKILL_LABELS]}`;
   }

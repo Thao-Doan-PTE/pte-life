@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, SlidersHorizontal } from "lucide-react";
 import { fetchAzureTts, isBrowserTtsSupported, speakWithBrowserTts, voiceLabel } from "@/lib/wfd-tts-client";
 import { PTE_VOICE_POOL } from "@/lib/azure-tts";
 
@@ -11,10 +11,6 @@ function formatTime(s: number): string {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-}
-
-function pickerStyle() {
-  return { background: "transparent", color: "var(--wfd-muted)", border: "none" } as const;
 }
 
 /** Phát audio bằng text-to-speech (ưu tiên Azure Neural TTS, fallback giọng đọc
@@ -41,6 +37,19 @@ export function TtsAudioPlayer({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [voiceOverride, setVoiceOverride] = useState<string | null>(null);
   const [unsupported, setUnsupported] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!optionsOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
+        setOptionsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [optionsOpen]);
 
   const buildAudio = async (voice: string | null) => {
     const azure = await fetchAzureTts(text, voice ?? undefined);
@@ -158,52 +167,76 @@ export function TtsAudioPlayer({
           className="h-1.5 min-w-[80px] flex-1 accent-[var(--wfd-red)]"
         />
 
-        <span className="wfd-mono shrink-0 text-xs font-semibold" style={{ color: "var(--wfd-muted)" }}>
+        <span className="wfd-mono shrink-0 text-[13px] font-semibold" style={{ color: "var(--wfd-muted)" }}>
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
 
         <button type="button" onClick={handleMuteToggle} className="flex shrink-0 items-center rounded-full border px-2 py-1" style={{ borderColor: "var(--wfd-border)" }}>
           {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
         </button>
-        <label className="flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-xs" style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-muted)" }}>
-          <select
-            className="wfd-mono cursor-pointer appearance-none bg-transparent font-semibold"
-            style={pickerStyle()}
-            value={playbackRate}
-            onChange={(e) => handleSpeedChange(Number(e.target.value))}
+        <div ref={optionsRef} className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => setOptionsOpen((v) => !v)}
+            className="flex items-center rounded-full border px-2 py-1"
+            style={{
+              borderColor: optionsOpen ? "var(--wfd-red)" : "var(--wfd-border)",
+              color: optionsOpen ? "var(--wfd-red)" : "var(--wfd-muted)",
+            }}
           >
-            {SPEED_OPTIONS.map((r) => (
-              <option key={r} value={r}>
-                X{r.toFixed(1)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-xs" style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-muted)" }}>
-          <select
-            className="wfd-mono cursor-pointer appearance-none bg-transparent font-semibold"
-            style={pickerStyle()}
-            value={voiceOverride ?? ""}
-            onChange={(e) => handleVoiceChange(e.target.value)}
-          >
-            <option value="">{voiceLabel(null)}</option>
-            {PTE_VOICE_POOL.map((v) => (
-              <option key={v.name} value={v.name}>
-                {voiceLabel(v.name)}
-              </option>
-            ))}
-          </select>
-        </label>
+            <SlidersHorizontal className="size-3.5" />
+          </button>
+
+          {optionsOpen && (
+            <div
+              className="absolute top-full right-0 z-10 mt-2 flex w-56 flex-col gap-3 rounded-xl border p-3 shadow-lg"
+              style={{ background: "var(--wfd-surface)", borderColor: "var(--wfd-border)" }}
+            >
+              <label className="flex flex-col gap-1 text-[13px] font-semibold" style={{ color: "var(--wfd-muted)" }}>
+                Tốc độ
+                <select
+                  className="wfd-mono rounded-lg border px-2 py-1.5 font-semibold"
+                  style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)", background: "var(--wfd-surface)" }}
+                  value={playbackRate}
+                  onChange={(e) => handleSpeedChange(Number(e.target.value))}
+                >
+                  {SPEED_OPTIONS.map((r) => (
+                    <option key={r} value={r}>
+                      X{r.toFixed(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-[13px] font-semibold" style={{ color: "var(--wfd-muted)" }}>
+                Giọng đọc
+                <select
+                  className="wfd-mono rounded-lg border px-2 py-1.5 font-semibold"
+                  style={{ borderColor: "var(--wfd-border)", color: "var(--wfd-ink)", background: "var(--wfd-surface)" }}
+                  value={voiceOverride ?? ""}
+                  onChange={(e) => handleVoiceChange(e.target.value)}
+                >
+                  <option value="">{voiceLabel(null)}</option>
+                  {PTE_VOICE_POOL.map((v) => (
+                    <option key={v.name} value={v.name}>
+                      {voiceLabel(v.name)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+        </div>
       </div>
 
       {isPlaying && (
-        <p className="text-xs" style={{ color: "var(--wfd-muted-2)" }}>
+        <p className="text-[13px]" style={{ color: "var(--wfd-muted-2)" }}>
           Đang phát câu… hãy lắng nghe cẩn thận.
         </p>
       )}
 
       {unsupported && (
-        <p className="text-xs" style={{ color: "var(--wfd-red-dark)" }}>
+        <p className="text-[13px]" style={{ color: "var(--wfd-red-dark)" }}>
           Trình duyệt không hỗ trợ đọc văn bản tự động.
         </p>
       )}

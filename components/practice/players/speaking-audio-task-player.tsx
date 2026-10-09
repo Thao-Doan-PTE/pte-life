@@ -74,12 +74,12 @@ export function SpeakingAudioTaskPlayer({
   return (
     <div className="flex flex-col gap-4">
       {!ready && (
-        <span className="w-fit text-sm font-bold" style={{ color: "var(--wfd-ink)" }}>
+        <span className="w-fit text-[15px] font-bold" style={{ color: "var(--wfd-ink)" }}>
           {`Prepare: 00:${String(countdown).padStart(2, "0")}`}
         </span>
       )}
       {ready && !canRecord && (
-        <span className="w-fit text-sm font-bold" style={{ color: "var(--wfd-ink)" }}>
+        <span className="w-fit text-[15px] font-bold" style={{ color: "var(--wfd-ink)" }}>
           Hãy lắng nghe cẩn thận — bạn sẽ nghe thấy câu này 1 lần.
         </span>
       )}
@@ -104,7 +104,7 @@ export function SpeakingAudioTaskPlayer({
             {isGrading && <Loader2 className="size-4 animate-spin" />}
             {isGrading ? "Đang chấm điểm bằng AI..." : "Nộp bài"}
           </Button>
-          {error && <p className="text-center text-sm text-destructive">{error}</p>}
+          {error && <p className="text-center text-[15px] text-destructive">{error}</p>}
         </>
       )}
     </div>

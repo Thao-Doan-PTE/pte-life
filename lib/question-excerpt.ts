@@ -1,5 +1,8 @@
 /** Hàm thuần, không đụng Prisma — an toàn để import từ client component. */
-export function questionExcerpt(content: Record<string, unknown>): string {
+
+/** Trích văn bản đầy đủ (không cắt ngắn) của 1 câu hỏi — dùng để xem trước lẫn để
+ * tính toán (vd. phân loại độ khó), nơi cần giữ nguyên số từ thật của câu hỏi. */
+export function extractQuestionText(content: Record<string, unknown>): string {
   let text =
     (content.passage as string) ??
     (content.prompt as string) ??
@@ -26,6 +29,11 @@ export function questionExcerpt(content: Record<string, unknown>): string {
     text = "(câu hỏi dạng hình ảnh)";
   }
 
-  if (typeof text !== "string" || text.length === 0) return "(không có nội dung xem trước)";
+  return typeof text === "string" ? text : "";
+}
+
+export function questionExcerpt(content: Record<string, unknown>): string {
+  const text = extractQuestionText(content);
+  if (text.length === 0) return "(không có nội dung xem trước)";
   return text.length > 80 ? `${text.slice(0, 80)}…` : text;
 }

@@ -19,7 +19,7 @@ export function TextBlanksPlayer({
   audioUrl: string;
   segments: BlankSegment[];
 }) {
-  const [hasPlayed, setHasPlayed] = useState(false);
+  const [, setHasPlayed] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submittedAnswers, setSubmittedAnswers] = useState<Record<string, string> | null>(null);
   const [result, setResult] = useState<ScoreResult | null>(null);
@@ -61,19 +61,15 @@ export function TextBlanksPlayer({
   return (
     <div className="flex flex-col gap-4">
       <SingleAudioPlayer audioUrl={audioUrl} onEnded={() => setHasPlayed(true)} />
-      {hasPlayed && (
-        <>
-          <TextBlanksInput segments={segments} onAnswersChange={setAnswers} />
-          <Button
-            className="w-fit self-center bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent/90"
-            disabled={Object.keys(answers).length < totalBlanks}
-            onClick={handleSubmit}
-          >
-            Nộp bài
-          </Button>
-        </>
-      )}
-      {error && <p className="text-center text-sm text-destructive">{error}</p>}
+      <TextBlanksInput segments={segments} onAnswersChange={setAnswers} />
+      <Button
+        className="w-fit self-center bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent/90"
+        disabled={Object.keys(answers).length < totalBlanks}
+        onClick={handleSubmit}
+      >
+        Nộp bài
+      </Button>
+      {error && <p className="text-center text-[15px] text-destructive">{error}</p>}
     </div>
   );
 }
