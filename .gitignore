@@ -48,3 +48,6 @@ next-env.d.ts
 
 # user-uploaded files (avatars, recordings)
 /public/uploads/
+
+# tài liệu nội bộ, không thuộc app
+/ra-soat-fb/

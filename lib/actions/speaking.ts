@@ -1,7 +1,7 @@
 "use server";
 
 import { clampText, requirePracticeAccess } from "@/lib/practice-access";
-import { consumeRateLimit } from "@/lib/rate-limit";
+import { consumeRateLimits } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { getSpeakingGrader } from "@/lib/scoring/ai/speaking-index";
 import type { SpeakingGradeResult, SpeakingTaskType } from "@/lib/scoring/ai/speaking-index";
@@ -38,7 +38,7 @@ export async function submitSpeakingAttemptAction(
   longestPauseMs?: number
 ): Promise<SpeakingSubmitResult> {
   const user = await requirePracticeAccess();
-  if (!(await consumeRateLimit("aiGradeUser", user.id)) || !(await consumeRateLimit("aiGradeUserDay", user.id))) {
+  if (!(await consumeRateLimits(["aiGradeUser", user.id], ["aiGradeUserDay", user.id]))) {
     throw new Error("Bạn đã chấm quá nhiều bài, vui lòng thử lại sau.");
   }
   // Dữ liệu từ trình duyệt — giới hạn độ dài/khoảng giá trị trước khi gửi cho AI chấm.

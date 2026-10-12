@@ -5,6 +5,7 @@ import { MockExamShell } from "@/components/mocktest/mock-exam-shell";
 import { renderExamPlayer } from "@/components/mocktest/exam-player-switch";
 import { submitMockAnswerAndAdvance } from "@/lib/actions/mocktest";
 import { PRACTICE_INSTRUCTIONS } from "@/lib/practice-config";
+import { QUESTION_TYPES } from "@/lib/question-types";
 import { requireClassStudent } from "@/lib/require-class-student";
 
 export default async function MockTestSessionPage({
@@ -37,9 +38,15 @@ export default async function MockTestSessionPage({
 
   const advance = submitMockAnswerAndAdvance.bind(null, sessionId, question.id);
   const DEFAULT_TIMER_SECONDS = 45;
-  const timerSeconds =
-    (instructions?.prepSeconds ?? 0) + (instructions?.recordSeconds ?? instructions?.timeLimitSeconds ?? 0) ||
-    DEFAULT_TIMER_SECONDS;
+  // Dạng Speaking: không dùng đồng hồ chung của khung thi. Bộ ghi âm đã tự đếm
+  // chuẩn bị + ghi âm và tự dừng; đồng hồ chung đếm từ lúc mở câu (chưa tính
+  // thời gian nghe audio/bấm bắt đầu) nên có thể chuyển câu khi học viên đang
+  // nói dở và làm mất bài nói.
+  const isSpeaking = QUESTION_TYPES.find((t) => t.id === question.questionTypeId)?.skill === "speaking";
+  const timerSeconds = isSpeaking
+    ? null
+    : (instructions?.prepSeconds ?? 0) + (instructions?.recordSeconds ?? instructions?.timeLimitSeconds ?? 0) ||
+      DEFAULT_TIMER_SECONDS;
 
   return (
     <MockExamShell

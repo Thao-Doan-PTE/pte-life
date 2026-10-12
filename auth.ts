@@ -3,10 +3,10 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import {
-  countRateLimitHits,
   getIpFromHeaders,
+  hasRecentRateLimitHit,
   recordRateLimitHit,
-  releaseRateLimitHits,
+  releaseRateLimit,
   takeRateLimit,
 } from "@/lib/rate-limit";
 import { findUserByEmail, normalizeEmail } from "@/lib/user-email";
@@ -44,12 +44,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const ip = getIpFromHeaders(request.headers);
         const pairKey = `${email}|${ip}`;
 
-        // Mỗi lần thử giữ trước 1 suất "đăng nhập sai" theo IP và theo email;
-        // đăng nhập đúng thì trả lại suất. Giữ trước (thay vì chỉ ghi khi sai)
-        // để gửi hàng loạt request song song cũng không vượt được giới hạn.
+        // Mỗi lần thử lấy trước 1 suất "đăng nhập sai" theo IP và theo email
+        // (tăng bộ đếm nguyên tử, nên gửi dồn request song song cũng không vượt
+        // được giới hạn); đăng nhập đúng thì trả lại suất.
         const ipTicket = await takeRateLimit("loginFailIp", ip);
         if (!ipTicket.allowed) throw new RateLimitedSignin();
         const emailTicket = await takeRateLimit("loginFailEmail", email);
+
+        // Email đang bị khoá tạm vì bị đoán sai nhiều lần: chỉ "máy quen" (IP đã
+        // đăng nhập thành công email này trong ~30 ngày qua) mới được thử tiếp —
+        // để chủ tài khoản vẫn vào được, còn kẻ dò mật khẩu đổi IP liên tục thì
+        // bị chặn trước cả bước kiểm tra mật khẩu.
+        if (!emailTicket.allowed && !(await hasRecentRateLimitHit("loginOkPair", pairKey))) {
+          throw new RateLimitedSignin();
+        }
 
         const user = await findUserByEmail(email, {
           id: true,
@@ -65,18 +73,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const passwordMatches = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
 
         if (!user || !passwordMatches) {
-          await recordRateLimitHit("loginFailPair", pairKey);
           if (!emailTicket.allowed) throw new RateLimitedSignin();
           return null;
         }
 
-        // Email đang bị khoá tạm vì có người đoán sai nhiều lần: vẫn cho chủ tài
-        // khoản vào nếu máy này (IP này) chưa từng đoán sai email này — để người
-        // khác không thể cố tình nhập sai liên tục mà khoá tài khoản học viên.
-        if (!emailTicket.allowed && (await countRateLimitHits("loginFailPair", pairKey)) > 0) {
-          throw new RateLimitedSignin();
-        }
-        await releaseRateLimitHits([ipTicket.hitId, emailTicket.hitId]);
+        await releaseRateLimit(ipTicket, emailTicket);
+        await recordRateLimitHit("loginOkPair", pairKey);
 
         // Tài khoản bị admin khoá (INACTIVE) không được đăng nhập.
         if (user.status !== "ACTIVE") throw new AccountLockedSignin();

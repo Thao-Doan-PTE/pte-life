@@ -1,7 +1,7 @@
 "use server";
 
 import { clampText, requirePracticeAccess } from "@/lib/practice-access";
-import { consumeRateLimit } from "@/lib/rate-limit";
+import { consumeRateLimits } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { getWritingGrader } from "@/lib/scoring/ai";
 import type { WritingGradeResult, WritingTaskType } from "@/lib/scoring/ai";
@@ -30,7 +30,7 @@ export async function submitWritingAttemptAction(
   durationSec = 0
 ): Promise<WritingSubmitResult> {
   const user = await requirePracticeAccess();
-  if (!(await consumeRateLimit("aiGradeUser", user.id)) || !(await consumeRateLimit("aiGradeUserDay", user.id))) {
+  if (!(await consumeRateLimits(["aiGradeUser", user.id], ["aiGradeUserDay", user.id]))) {
     throw new Error("Bạn đã chấm quá nhiều bài, vui lòng thử lại sau.");
   }
   // Bài viết dài nhất (Write Essay) tối đa 300 từ — giới hạn ký tự để không gửi

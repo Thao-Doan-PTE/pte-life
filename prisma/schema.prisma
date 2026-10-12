@@ -394,14 +394,18 @@ model ConsultationRequest {
   @@index([status, createdAt])
 }
 
-// Mỗi dòng = 1 lần thử một thao tác nhạy cảm (đăng nhập sai, đăng ký, chấm AI…).
-// Đếm theo `key` trong một khoảng thời gian để chặn dò mật khẩu, spam tài khoản
-// và lạm dụng chi phí AI. Lưu trong DB (không phải bộ nhớ) vì trên Vercel mỗi
-// request có thể chạy ở một instance khác nhau.
-model RateLimitHit {
-  id        String   @id @default(cuid())
-  key       String
-  createdAt DateTime @default(now())
+// Bộ đếm chống lạm dụng (đăng nhập sai, đăng ký, chấm AI…): mỗi dòng = số lần
+// của 1 `key` trong 1 khung thời gian cố định bắt đầu từ `windowStart`. Tăng
+// bằng 1 câu lệnh INSERT … ON CONFLICT DO UPDATE (nguyên tử, không cần khoá hay
+// transaction dài) nên gửi dồn request song song cũng không vượt được giới hạn.
+// Lưu trong DB (không phải bộ nhớ) vì trên Vercel mỗi request có thể chạy ở
+// một instance khác nhau.
+model RateLimitCounter {
+  key         String
+  windowStart DateTime
+  expiresAt   DateTime
+  count       Int      @default(0)
 
-  @@index([key, createdAt])
+  @@id([key, windowStart])
+  @@index([expiresAt])
 }
