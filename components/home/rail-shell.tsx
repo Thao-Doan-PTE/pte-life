@@ -75,9 +75,29 @@ function buildBlocks(role: Role): RailBlock[] {
         label: "Liên hệ tư vấn",
         description: (
           <>
-            Hotline: <span className="tabular-nums">[số hotline PTE-Life]</span>
-            <br />
-            Zalo OA: <span>[PTE-Life]</span>
+            <span className="block">Hotline khu vực:</span>
+            <ul className="m-0 list-disc pl-5">
+              {[
+                ["Hà Nội", "0762.116.448"],
+                ["Đà Nẵng", "0981.864.064"],
+                ["Nghệ An", "0966.626.760"],
+                ["TP. HCM", "0393.084.305"],
+              ].map(([city, phone]) => (
+                <li key={city}>
+                  {city}:{" "}
+                  <a href={`tel:${phone.replace(/\./g, "")}`} className="tabular-nums hover:underline">
+                    {phone}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <span className="mt-1.5 block">
+              Email:
+              <br />
+              <a href="mailto:hotro@ptelife.com.vn" className="hover:underline">
+                hotro@ptelife.com.vn
+              </a>
+            </span>
           </>
         ),
       },

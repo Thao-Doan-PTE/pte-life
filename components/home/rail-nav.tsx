@@ -112,9 +112,9 @@ export function RailNav({ entries, blocks }: { entries: RailEntry[]; blocks: Rai
               {b.label} <ArrowIcon />
             </Link>
             {b.description && (
-              <p className="m-0 text-[14px] leading-[20px]" style={{ color: "var(--rail-ink-dim)" }}>
+              <div className="m-0 text-[14px] leading-[20px]" style={{ color: "var(--rail-ink-dim)" }}>
                 {b.description}
-              </p>
+              </div>
             )}
           </div>
         ) : (
@@ -123,9 +123,9 @@ export function RailNav({ entries, blocks }: { entries: RailEntry[]; blocks: Rai
               {b.label} <ArrowIcon />
             </Link>
             {b.description && (
-              <p className="m-0 text-[15px] leading-[22px]" style={{ color: "var(--rail-ink-dim)" }}>
+              <div className="m-0 text-[15px] leading-[22px]" style={{ color: "var(--rail-ink-dim)" }}>
                 {b.description}
-              </p>
+              </div>
             )}
           </div>
         )
