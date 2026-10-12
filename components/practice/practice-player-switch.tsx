@@ -15,6 +15,7 @@ import { HighlightWordsPlayer } from "@/components/practice/players/highlight-wo
 import type { PracticeInstructions } from "@/lib/practice-config";
 import type { BlankSegment } from "@/components/practice/dropdown-blanks";
 import type { ParagraphItem } from "@/components/practice/reorder-paragraphs";
+import { toOpaqueParagraphId } from "@/lib/opaque-id";
 import { stripBlankAnswers } from "@/lib/practice-content-utils";
 
 export function renderPracticePlayer(
@@ -147,7 +148,10 @@ export function renderPracticePlayer(
         return (
           <ReorderParagraphsPlayer
             questionId={questionId}
-            paragraphs={content.paragraphs as ParagraphItem[]}
+            paragraphs={(content.paragraphs as ParagraphItem[]).map((p) => ({
+              ...p,
+              id: toOpaqueParagraphId(questionId, p.id),
+            }))}
           />
         );
       break;

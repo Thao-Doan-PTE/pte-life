@@ -1,7 +1,7 @@
 "use server";
 
+import { requirePracticeAccess } from "@/lib/practice-access";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { QUESTION_TYPES, type Skill } from "@/lib/question-types";
 import { submitAttemptAction } from "@/lib/actions/practice";
@@ -17,11 +17,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 async function requireUser() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Bạn cần đăng nhập.");
-  }
-  return session.user;
+  return requirePracticeAccess();
 }
 
 export async function createQuestionTestSession(formData: FormData) {

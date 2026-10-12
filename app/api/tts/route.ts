@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requirePracticeAccess } from "@/lib/practice-access";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import {
   isAzureTtsConfigured,
   isKnownVoice,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/azure-tts";
 
 const MAX_TEXT_LENGTH = 400;
+const MAX_CACHE_ENTRIES = 500;
 
 // Cache theo (voice::text) trong bộ nhớ server — các câu trong đề tủ WFD là
 // cố định và được nhiều học viên nghe lại nhiều lần, nên cache giúp giảm
@@ -15,8 +17,10 @@ const MAX_TEXT_LENGTH = 400;
 const audioCache = new Map<string, ArrayBuffer>();
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
+  let userId: string;
+  try {
+    userId = (await requirePracticeAccess()).id;
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -47,7 +51,15 @@ export async function POST(request: NextRequest) {
   try {
     let audio = audioCache.get(cacheKey);
     if (!audio) {
+      if (!(await consumeRateLimit("ttsUser", userId))) {
+        return NextResponse.json({ error: "Bạn đã nghe quá nhiều câu mới trong 1 giờ, vui lòng thử lại sau." }, { status: 429 });
+      }
       audio = await synthesizeSpeech(text, voiceName);
+      // Giới hạn số câu giữ trong bộ nhớ để server không bị đầy RAM.
+      if (audioCache.size >= MAX_CACHE_ENTRIES) {
+        const oldestKey = audioCache.keys().next().value;
+        if (oldestKey !== undefined) audioCache.delete(oldestKey);
+      }
       audioCache.set(cacheKey, audio);
     }
 

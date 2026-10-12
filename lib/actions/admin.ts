@@ -15,6 +15,7 @@ export async function getAllUsersForAdmin() {
   return prisma.user.findMany({
     where: { roles: { has: "STUDENT" } },
     orderBy: { createdAt: "desc" },
+    omit: { passwordHash: true },
   });
 }
 

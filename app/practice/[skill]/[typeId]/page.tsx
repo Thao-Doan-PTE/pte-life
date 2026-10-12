@@ -10,6 +10,7 @@ import { WfdShell } from "@/components/wfd/wfd-shell";
 import { WfdQuestionList } from "@/components/wfd/wfd-question-list";
 import { PracticeQuestionList } from "@/components/practice/practice-question-list";
 import { getWfdQuestions, getWfdPracticedSet, getWfdFavoriteSet } from "@/lib/wfd-queries";
+import { requireClassStudent } from "@/lib/require-class-student";
 
 const VALID_SKILLS: Skill[] = ["speaking", "writing", "reading", "listening"];
 
@@ -20,6 +21,9 @@ export default async function PracticeQuestionTypePage({
   params: Promise<{ skill: string; typeId: string }>;
   searchParams: Promise<{ bank?: string }>;
 }) {
+  // Chặn ở từng trang (không chỉ ở layout): khi chuyển trang phía trình duyệt,
+  // Next.js có thể bỏ qua layout đã có sẵn.
+  await requireClassStudent();
   const { skill, typeId } = await params;
   const { bank: bankParam } = await searchParams;
   const bank = bankParam === "TU" ? "TU" : undefined;

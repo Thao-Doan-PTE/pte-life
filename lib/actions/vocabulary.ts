@@ -25,7 +25,12 @@ interface MyMemoryResponse {
 /** Tra phiên âm IPA (dictionaryapi.dev, miễn phí) + nghĩa tiếng Việt (MyMemory,
  * miễn phí) cho 1 từ tiếng Anh — dùng cho tính năng chạm-vào-từ-để-tra-nghĩa. */
 export async function lookupWordAction(rawWord: string): Promise<WordLookupResult> {
-  const word = rawWord.toLowerCase().replace(/[^a-z'-]/g, "");
+  // Mỗi lượt tra gọi 2 dịch vụ bên ngoài — chỉ cho người đã đăng nhập dùng.
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { word: String(rawWord).slice(0, 40), phonetic: null, meaningVi: null };
+  }
+  const word = String(rawWord).toLowerCase().replace(/[^a-z'-]/g, "").slice(0, 40);
   if (!word) {
     return { word: rawWord, phonetic: null, meaningVi: null };
   }
@@ -78,6 +83,10 @@ export async function saveWordAction(
   if (!session?.user?.id) {
     throw new Error("Bạn cần đăng nhập để lưu từ vựng.");
   }
+  word = String(word).trim().slice(0, 60);
+  phonetic = phonetic == null ? null : String(phonetic).slice(0, 100);
+  meaningVi = meaningVi == null ? null : String(meaningVi).slice(0, 500);
+  if (!word) throw new Error("Từ không hợp lệ.");
   await prisma.savedWord.upsert({
     where: { userId_word: { userId: session.user.id, word } },
     update: { phonetic, meaningVi },

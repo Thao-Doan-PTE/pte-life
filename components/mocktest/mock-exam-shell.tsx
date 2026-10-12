@@ -61,14 +61,23 @@ function MockExamShellInner({
   const submittedRef = useRef(false);
   const getBeforeAdvance = useExamAdvanceHandler();
 
+  const [advanceError, setAdvanceError] = useState(false);
+
   const runAdvance = async () => {
     if (submittedRef.current) return;
     submittedRef.current = true;
+    setAdvanceError(false);
     const beforeAdvance = getBeforeAdvance();
     if (beforeAdvance) {
       setIsAdvancing(true);
       try {
         await beforeAdvance();
+      } catch {
+        // Chấm/lưu câu này lỗi (mất mạng, AI bận, quá giới hạn…): không kẹt ở
+        // nút Next — cho học viên chọn thử lại hoặc bỏ qua câu này.
+        submittedRef.current = false;
+        setAdvanceError(true);
+        return;
       } finally {
         setIsAdvancing(false);
       }
@@ -76,9 +85,19 @@ function MockExamShellInner({
     formRef.current?.requestSubmit();
   };
 
+  const skipQuestion = () => {
+    if (submittedRef.current) return;
+    submittedRef.current = true;
+    setAdvanceError(false);
+    formRef.current?.requestSubmit();
+  };
+
   useEffect(() => {
     submittedRef.current = false;
-    const id = setTimeout(() => setRemaining(timerSeconds ?? 0), 0);
+    const id = setTimeout(() => {
+      setRemaining(timerSeconds ?? 0);
+      setAdvanceError(false);
+    }, 0);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
@@ -156,6 +175,15 @@ function MockExamShellInner({
           >
             Thoát chế độ thi
           </Link>
+          {advanceError && (
+            <div className="flex items-center gap-2 text-xs text-white" role="alert">
+              <span className="hidden sm:inline">Chưa chấm được câu này (mất kết nối hoặc hệ thống đang bận).</span>
+              <span className="sm:hidden">Chưa chấm được câu này.</span>
+              <button type="button" onClick={skipQuestion} className="underline underline-offset-2 hover:text-neutral-200">
+                Bỏ qua câu này
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={runAdvance}
@@ -163,7 +191,7 @@ function MockExamShellInner({
             className="flex items-center gap-1.5 rounded-sm bg-neutral-100 px-6 py-1.5 text-sm font-semibold text-neutral-800 hover:bg-white disabled:opacity-70"
           >
             {isAdvancing && <Loader2 className="size-3.5 animate-spin" />}
-            {isAdvancing ? "Đang chấm điểm..." : isLast ? "Kết thúc" : "Next"}
+            {isAdvancing ? "Đang chấm điểm..." : advanceError ? "Thử lại" : isLast ? "Kết thúc" : "Next"}
           </button>
         </footer>
       </form>

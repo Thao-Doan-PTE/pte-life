@@ -14,11 +14,14 @@ export default function LoginPage() {
         <Suspense>
           <LoginForm />
         </Suspense>
-        <div className="mt-6 rounded-lg bg-muted p-3 text-[13px] text-muted-foreground">
-          <p className="font-medium">Tài khoản demo (Bước 2 — mock):</p>
-          <p>hocvien@ptelife.vn / pte123456 (PTE Academic)</p>
-          <p>hocvien.core@ptelife.vn / pte123456 (PTE Core)</p>
-        </div>
+        {/* Tài khoản demo chỉ hiện khi chạy ở máy dev — không bao giờ lộ trên web thật. */}
+        {process.env.NODE_ENV !== "production" && (
+          <div className="mt-6 rounded-lg bg-muted p-3 text-[13px] text-muted-foreground">
+            <p className="font-medium">Tài khoản demo (chỉ hiện ở máy dev):</p>
+            <p>hocvien@ptelife.vn / pte123456 (PTE Academic)</p>
+            <p>hocvien.core@ptelife.vn / pte123456 (PTE Core)</p>
+          </div>
+        )}
       </div>
     </div>
   );

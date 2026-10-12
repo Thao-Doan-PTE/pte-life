@@ -498,6 +498,13 @@ async function seedQuestions() {
 }
 
 async function main() {
+  // Seed tạo các tài khoản demo dùng chung mật khẩu "pte123456" (kể cả ADMIN) —
+  // chỉ chạy lên database ở máy (localhost) trừ khi cố ý bật ALLOW_PROD_SEED=1.
+  const dbUrl = process.env.DATABASE_URL ?? "";
+  const isLocalDb = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(dbUrl);
+  if ((!isLocalDb || process.env.NODE_ENV === "production") && process.env.ALLOW_PROD_SEED !== "1") {
+    throw new Error("Seed chỉ chạy trên database ở máy (localhost). Đặt ALLOW_PROD_SEED=1 nếu thật sự muốn seed database này.");
+  }
   await seedUsers();
   await seedQuestions();
   await seedClasses();

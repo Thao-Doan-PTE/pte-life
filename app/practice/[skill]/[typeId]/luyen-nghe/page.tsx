@@ -4,6 +4,7 @@ import { WfdShell } from "@/components/wfd/wfd-shell";
 import { WfdListenPractice } from "@/components/wfd/wfd-listen-practice";
 import { getQuestionsForType } from "@/lib/practice-queries";
 import { QUESTION_TYPES, type Skill } from "@/lib/question-types";
+import { requireClassStudent } from "@/lib/require-class-student";
 
 const VALID_SKILLS: Skill[] = ["speaking", "writing", "reading", "listening"];
 
@@ -19,6 +20,9 @@ export default async function WfdListenPracticePage({
 }: {
   params: Promise<{ skill: string; typeId: string }>;
 }) {
+  // Chặn ở từng trang (không chỉ ở layout): khi chuyển trang phía trình duyệt,
+  // Next.js có thể bỏ qua layout đã có sẵn.
+  await requireClassStudent();
   const { skill, typeId } = await params;
   const fields = CONTENT_FIELD_BY_TYPE[typeId];
 

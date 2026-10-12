@@ -19,6 +19,7 @@ import { WfdProgressBar } from "@/components/wfd/wfd-progress-bar";
 import { WfdPlayScreen } from "@/components/wfd/wfd-play-screen";
 import { WfdTipsCard } from "@/components/wfd/wfd-sidebar-cards";
 import { getStreakDays } from "@/lib/wfd-queries";
+import { requireClassStudent } from "@/lib/require-class-student";
 
 const VALID_SKILLS: Skill[] = ["speaking", "writing", "reading", "listening"];
 
@@ -29,6 +30,9 @@ export default async function PracticePlayerPage({
   params: Promise<{ skill: string; typeId: string; questionId: string }>;
   searchParams: Promise<{ bank?: string }>;
 }) {
+  // Chặn ở từng trang (không chỉ ở layout): khi chuyển trang phía trình duyệt,
+  // Next.js có thể bỏ qua layout đã có sẵn.
+  await requireClassStudent();
   const { skill, typeId, questionId } = await params;
   const { bank: bankParam } = await searchParams;
   const bank = bankParam === "TU" ? "TU" : undefined;

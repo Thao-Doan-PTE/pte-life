@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { CONSULTATION_TIME_SLOTS } from "@/lib/consultation-slots";
 
 const PHONE_RE = /^(0|\+84)[35789]\d{8}$/;
@@ -21,9 +22,9 @@ export async function submitConsultationRequestAction(
   const session = await auth();
   if (!session?.user?.id) return { error: "Bạn cần đăng nhập để đặt lịch tư vấn." };
 
-  const name = String(formData.get("name") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").replace(/[\s.-]/g, "");
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 100);
+  const phone = String(formData.get("phone") ?? "").replace(/[\s.-]/g, "").slice(0, 20);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200);
   const date = String(formData.get("date") ?? "").trim();
   const timeSlot = String(formData.get("timeSlot") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim().slice(0, 500);
@@ -44,6 +45,10 @@ export async function submitConsultationRequestAction(
   if (!(CONSULTATION_TIME_SLOTS as readonly string[]).includes(timeSlot)) fieldErrors.timeSlot = "Chọn khung giờ";
 
   if (Object.keys(fieldErrors).length > 0 || !preferred) return { fieldErrors, values };
+
+  if (!(await consumeRateLimit("consultationUser", session.user.id))) {
+    return { error: "Bạn đã gửi quá nhiều yêu cầu hôm nay, PTE-Life sẽ liên hệ lại sớm.", values };
+  }
 
   await prisma.consultationRequest.create({
     data: {

@@ -393,3 +393,15 @@ model ConsultationRequest {
   @@index([userId])
   @@index([status, createdAt])
 }
+
+// Mỗi dòng = 1 lần thử một thao tác nhạy cảm (đăng nhập sai, đăng ký, chấm AI…).
+// Đếm theo `key` trong một khoảng thời gian để chặn dò mật khẩu, spam tài khoản
+// và lạm dụng chi phí AI. Lưu trong DB (không phải bộ nhớ) vì trên Vercel mỗi
+// request có thể chạy ở một instance khác nhau.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}

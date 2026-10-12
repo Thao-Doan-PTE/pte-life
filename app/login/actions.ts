@@ -16,8 +16,12 @@ export async function loginAction(
   } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {
-        case "CredentialsSignin":
+        case "CredentialsSignin": {
+          const code = (error as AuthError & { code?: string }).code;
+          if (code === "rate_limited") return "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.";
+          if (code === "account_locked") return "Tài khoản đã bị khoá. Vui lòng liên hệ PTE-Life để được hỗ trợ.";
           return "Email hoặc mật khẩu không đúng.";
+        }
         default:
           return "Đã có lỗi xảy ra, vui lòng thử lại.";
       }

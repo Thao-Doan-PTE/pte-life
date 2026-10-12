@@ -32,7 +32,9 @@ export function ExamSpeakingAudioPlayer({
   useRegisterBeforeAdvance(
     recording
       ? async () => {
-          await handleSubmit();
+          // Báo lỗi lên khung thi để học viên chọn thử lại / bỏ qua, thay vì
+          // lặng lẽ chuyển câu và mất bài nói.
+          if (!(await handleSubmit())) throw new Error("Không chấm được bài nói.");
         }
       : null
   );

@@ -13,8 +13,9 @@ export function useSpeakingGrading(questionId: string) {
   const [result, setResult] = useState<SpeakingSubmitResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
-    if (!recording) return;
+  /** Trả về true nếu chấm xong, false nếu lỗi (đã hiện thông báo qua `error`). */
+  const handleSubmit = async (): Promise<boolean> => {
+    if (!recording) return false;
     setIsGrading(true);
     setError(null);
     try {
@@ -26,8 +27,10 @@ export function useSpeakingGrading(questionId: string) {
         recording.longestPauseMs
       );
       setResult(res);
+      return true;
     } catch {
       setError("Không thể chấm điểm bằng AI lúc này, vui lòng thử lại sau.");
+      return false;
     } finally {
       setIsGrading(false);
     }

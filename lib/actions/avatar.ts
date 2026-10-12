@@ -7,6 +7,8 @@ import { put, del } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { detectImage } from "@/lib/file-signature";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
 const ALLOWED_TYPES: Record<string, string> = {
@@ -42,19 +44,24 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadAvat
   if (file.size > MAX_FILE_SIZE) {
     return { ok: false, error: "Ảnh quá lớn (tối đa 3MB)." };
   }
-  const ext = ALLOWED_TYPES[file.type];
-  if (!ext) {
+  // Kiểm tra loại file thật qua nội dung, không tin file.type trình duyệt gửi lên.
+  const kind = ALLOWED_TYPES[file.type] ? await detectImage(file) : null;
+  if (!kind) {
     return { ok: false, error: "Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP." };
   }
+  const ext = kind.ext;
 
   const userId = session.user.id;
+  if (!(await consumeRateLimit("uploadUser", userId))) {
+    return { ok: false, error: "Bạn đã tải lên quá nhiều lần, vui lòng thử lại sau." };
+  }
   const filename = `${userId}-${randomUUID()}.${ext}`;
 
   const previous = await prisma.user.findUnique({ where: { id: userId }, select: { avatarUrl: true } });
 
   let avatarUrl: string;
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const blob = await put(`avatars/${filename}`, file, { access: "public" });
+    const blob = await put(`avatars/${filename}`, file, { access: "public", contentType: kind.contentType });
     avatarUrl = blob.url;
   } else {
     await mkdir(AVATAR_DIR, { recursive: true });

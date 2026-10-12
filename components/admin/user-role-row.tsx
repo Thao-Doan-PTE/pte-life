@@ -23,7 +23,8 @@ export interface UserRoleRowData {
   status: "ACTIVE" | "INACTIVE";
 }
 
-export function UserRoleRow({ user }: { user: UserRoleRowData }) {
+/** `isSelf`: dòng của chính admin đang đăng nhập — không cho tự bỏ quyền ADMIN hay tự khoá. */
+export function UserRoleRow({ user, isSelf = false }: { user: UserRoleRowData; isSelf?: boolean }) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -47,29 +48,37 @@ export function UserRoleRow({ user }: { user: UserRoleRowData }) {
         <form action={updateUserRolesAction} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="userId" value={user.id} />
           <div className="flex flex-wrap gap-3">
-            {ALL_ROLES.map((r) => (
-              <label key={r} className="flex items-center gap-1.5 text-sm">
-                <input
-                  type="checkbox"
-                  name={`role_${r}`}
-                  defaultChecked={user.roles.includes(r)}
-                  className="size-4 accent-[var(--brand-accent,#e4222b)]"
-                />
-                {ROLE_LABELS[r]}
-              </label>
-            ))}
+            {ALL_ROLES.map((r) => {
+              const lockedAdmin = isSelf && r === "ADMIN";
+              return (
+                <label key={r} className="flex items-center gap-1.5 text-sm">
+                  {/* Checkbox bị disabled không được gửi lên — gửi kèm input ẩn để giữ quyền ADMIN. */}
+                  {lockedAdmin && <input type="hidden" name="role_ADMIN" value="on" />}
+                  <input
+                    type="checkbox"
+                    name={lockedAdmin ? undefined : `role_${r}`}
+                    defaultChecked={lockedAdmin || user.roles.includes(r)}
+                    disabled={lockedAdmin}
+                    className="size-4 accent-[var(--brand-accent,#e4222b)]"
+                  />
+                  {ROLE_LABELS[r]}
+                </label>
+              );
+            })}
           </div>
           <Button type="submit" size="sm" variant="outline">
             Lưu role
           </Button>
         </form>
 
-        <form action={toggleUserStatusAction}>
-          <input type="hidden" name="userId" value={user.id} />
-          <Button type="submit" size="sm" variant={user.status === "ACTIVE" ? "destructive" : "outline"}>
-            {user.status === "ACTIVE" ? "Khoá tài khoản" : "Mở khoá"}
-          </Button>
-        </form>
+        {!isSelf && (
+          <form action={toggleUserStatusAction}>
+            <input type="hidden" name="userId" value={user.id} />
+            <Button type="submit" size="sm" variant={user.status === "ACTIVE" ? "destructive" : "outline"}>
+              {user.status === "ACTIVE" ? "Khoá tài khoản" : "Mở khoá"}
+            </Button>
+          </form>
+        )}
       </div>
     </div>
   );

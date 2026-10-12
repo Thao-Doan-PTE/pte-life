@@ -1,6 +1,7 @@
 "use server";
 
-import { auth } from "@/auth";
+import { clampText, requirePracticeAccess } from "@/lib/practice-access";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { getSpeakingGrader } from "@/lib/scoring/ai/speaking-index";
 import type { SpeakingGradeResult, SpeakingTaskType } from "@/lib/scoring/ai/speaking-index";
@@ -36,10 +37,15 @@ export async function submitSpeakingAttemptAction(
   pauseCount?: number,
   longestPauseMs?: number
 ): Promise<SpeakingSubmitResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Bạn cần đăng nhập để nộp bài.");
+  const user = await requirePracticeAccess();
+  if (!(await consumeRateLimit("aiGradeUser", user.id)) || !(await consumeRateLimit("aiGradeUserDay", user.id))) {
+    throw new Error("Bạn đã chấm quá nhiều bài, vui lòng thử lại sau.");
   }
+  // Dữ liệu từ trình duyệt — giới hạn độ dài/khoảng giá trị trước khi gửi cho AI chấm.
+  transcript = clampText(transcript, 3000);
+  durationSeconds = Math.min(600, Math.max(0, Number(durationSeconds) || 0));
+  pauseCount = pauseCount == null ? undefined : Math.min(1000, Math.max(0, Math.round(Number(pauseCount) || 0)));
+  longestPauseMs = longestPauseMs == null ? undefined : Math.min(600_000, Math.max(0, Number(longestPauseMs) || 0));
 
   const question = await prisma.question.findUniqueOrThrow({
     where: { id: questionId },
@@ -72,7 +78,7 @@ export async function submitSpeakingAttemptAction(
 
   await prisma.practiceAttempt.create({
     data: {
-      userId: session.user.id,
+      userId: user.id,
       questionId: question.id,
       questionTypeId: question.questionTypeId,
       scorePct,

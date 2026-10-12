@@ -45,6 +45,7 @@ export default async function AdminUsersPage() {
             <UserRoleRow
               key={u.id}
               user={{ id: u.id, name: u.name, email: u.email, roles: u.roles, status: u.status }}
+              isSelf={u.id === session.user.id}
             />
           ))}
         </div>

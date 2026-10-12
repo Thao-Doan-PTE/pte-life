@@ -11,7 +11,8 @@ const ALL_ROLES: Role[] = ["ADMIN", "OPS", "ACADEMIC_LEAD", "TEACHER", "STUDENT"
  * (chỉ dùng cho trang gói học/bảo lưu, giữ nguyên không đụng tới). */
 export async function getAllUsersForRoleManagement() {
   await requireRole(["ADMIN"]);
-  return prisma.user.findMany({ orderBy: { createdAt: "desc" } });
+  // File "use server" — hàm export gọi được trực tiếp qua HTTP, nên không bao giờ trả mã băm mật khẩu.
+  return prisma.user.findMany({ orderBy: { createdAt: "desc" }, omit: { passwordHash: true } });
 }
 
 export async function getUsersByRole(role: Role) {
@@ -30,6 +31,10 @@ export async function updateUserRolesAction(formData: FormData) {
   if (roles.length === 0) {
     throw new Error("Mỗi user phải có ít nhất 1 role.");
   }
+  // Không cho admin tự bỏ quyền ADMIN của chính mình (tránh tự khoá khỏi trang quản trị).
+  if (userId === admin.id && !roles.includes("ADMIN")) {
+    throw new Error("Bạn không thể tự bỏ quyền ADMIN của chính mình.");
+  }
 
   await prisma.user.update({ where: { id: userId }, data: { roles } });
   await prisma.auditLog.create({
@@ -47,6 +52,9 @@ export async function updateUserRolesAction(formData: FormData) {
 export async function toggleUserStatusAction(formData: FormData) {
   const admin = await requireRole(["ADMIN"]);
   const userId = formData.get("userId") as string;
+  if (userId === admin.id) {
+    throw new Error("Bạn không thể tự khoá tài khoản của chính mình.");
+  }
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   const nextStatus = user.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
 

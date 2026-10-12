@@ -1,6 +1,7 @@
 "use server";
 
-import { auth } from "@/auth";
+import { clampText, requirePracticeAccess } from "@/lib/practice-access";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { getWritingGrader } from "@/lib/scoring/ai";
 import type { WritingGradeResult, WritingTaskType } from "@/lib/scoring/ai";
@@ -28,10 +29,13 @@ export async function submitWritingAttemptAction(
   studentText: string,
   durationSec = 0
 ): Promise<WritingSubmitResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Bạn cần đăng nhập để nộp bài.");
+  const user = await requirePracticeAccess();
+  if (!(await consumeRateLimit("aiGradeUser", user.id)) || !(await consumeRateLimit("aiGradeUserDay", user.id))) {
+    throw new Error("Bạn đã chấm quá nhiều bài, vui lòng thử lại sau.");
   }
+  // Bài viết dài nhất (Write Essay) tối đa 300 từ — giới hạn ký tự để không gửi
+  // văn bản khổng lồ cho AI chấm.
+  studentText = clampText(studentText, 5000);
 
   const question = await prisma.question.findUniqueOrThrow({
     where: { id: questionId },
@@ -54,14 +58,14 @@ export async function submitWritingAttemptAction(
 
   await prisma.practiceAttempt.create({
     data: {
-      userId: session.user.id,
+      userId: user.id,
       questionId: question.id,
       questionTypeId: question.questionTypeId,
       scorePct,
       pteScore,
       isCorrect: correct,
       response: { text: studentText, grade } as unknown as Prisma.InputJsonValue,
-      durationSec: Math.max(0, Math.round(durationSec)),
+      durationSec: Math.min(24 * 3600, Math.max(0, Math.round(Number(durationSec) || 0))),
     },
   });
 

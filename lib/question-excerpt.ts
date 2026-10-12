@@ -11,8 +11,9 @@ export function extractQuestionText(content: Record<string, unknown>): string {
     (content.question as string) ??
     (content.sentence as string) ??
     (content.referenceText as string) ??
-    (content.referenceAnswer as string) ??
     "";
+  // Không dùng referenceAnswer (đáp án Answer Short Question) — xem trước
+  // trong danh sách câu sẽ lộ đáp án.
 
   if (!text && Array.isArray(content.paragraphs)) {
     text = (content.paragraphs as { text: string }[]).map((p) => p.text).join(" ");
@@ -27,6 +28,9 @@ export function extractQuestionText(content: Record<string, unknown>): string {
   }
   if (!text && typeof content.imageUrl === "string") {
     text = "(câu hỏi dạng hình ảnh)";
+  }
+  if (!text && typeof content.audioUrl === "string") {
+    text = "(câu hỏi dạng audio)";
   }
 
   return typeof text === "string" ? text : "";

@@ -13,8 +13,12 @@ import {
   getWeakestQuestionType,
 } from "@/lib/mocktest-queries";
 import { getStreakDays } from "@/lib/wfd-queries";
+import { requireClassStudent } from "@/lib/require-class-student";
 
 export default async function MocktestPage() {
+  // Chặn ở từng trang (không chỉ ở layout): khi chuyển trang phía trình duyệt,
+  // Next.js có thể bỏ qua layout đã có sẵn.
+  await requireClassStudent();
   const session = await auth();
   const userId = session!.user.id;
   const examPackage = session!.user.examPackage;

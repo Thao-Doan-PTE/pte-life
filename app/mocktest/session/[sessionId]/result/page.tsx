@@ -10,12 +10,16 @@ import { cn } from "@/lib/utils";
 import { scoreColorClass } from "@/lib/format";
 import { getSessionQuestionResults } from "@/lib/mocktest-queries";
 import { mockTestSessionLabel } from "@/lib/mocktest-label";
+import { requireClassStudent } from "@/lib/require-class-student";
 
 export default async function MockTestResultPage({
   params,
 }: {
   params: Promise<{ sessionId: string }>;
 }) {
+  // Chặn ở từng trang (không chỉ ở layout): khi chuyển trang phía trình duyệt,
+  // Next.js có thể bỏ qua layout đã có sẵn.
+  await requireClassStudent();
   const { sessionId } = await params;
   const session = await auth();
   const userId = session!.user.id;

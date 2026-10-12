@@ -5,12 +5,16 @@ import { MockExamShell } from "@/components/mocktest/mock-exam-shell";
 import { renderExamPlayer } from "@/components/mocktest/exam-player-switch";
 import { submitMockAnswerAndAdvance } from "@/lib/actions/mocktest";
 import { PRACTICE_INSTRUCTIONS } from "@/lib/practice-config";
+import { requireClassStudent } from "@/lib/require-class-student";
 
 export default async function MockTestSessionPage({
   params,
 }: {
   params: Promise<{ sessionId: string }>;
 }) {
+  // Chặn ở từng trang (không chỉ ở layout): khi chuyển trang phía trình duyệt,
+  // Next.js có thể bỏ qua layout đã có sẵn.
+  await requireClassStudent();
   const { sessionId } = await params;
   const session = await auth();
   const userId = session!.user.id;
