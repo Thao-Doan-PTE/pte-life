@@ -11,7 +11,8 @@ export function EntryTestTable({
   emptyText,
 }: {
   rows: EntryTestAdminRow[];
-  /** Hiện cột hành động "Xếp lớp" (người có quyền xem Học viên & gói học). */
+  /** Hiện nút "Xếp lớp" (người có quyền xem Học viên & gói học). Nút "Xem bài"
+   * (trang chi tiết) luôn hiện cho mọi người có quyền xem test đầu vào. */
   showActions: boolean;
   emptyText: string;
 }) {
@@ -33,11 +34,9 @@ export function EntryTestTable({
             <th scope="col">{teacherLabel}</th>
             <th scope="col">Lộ trình gợi ý</th>
             <th scope="col">Xếp lớp</th>
-            {showActions && (
-              <th scope="col">
-                <span className="sr-only">Hành động</span>
-              </th>
-            )}
+            <th scope="col">
+              <span className="sr-only">Hành động</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -45,14 +44,17 @@ export function EntryTestTable({
             const auto = r.scoreAuto ?? 0;
             const pct = ENTRY_TEST_SCALE.autoMax > 0 ? Math.round((auto / ENTRY_TEST_SCALE.autoMax) * 100) : 0;
             const graded = r.status === "GRADED";
+            const detailHref = `/admin/entry-tests/${encodeURIComponent(r.id)}`;
             return (
               <tr key={r.id}>
                 <td className="min-w-[220px]">
-                  <PersonCell
-                    name={r.user.name}
-                    email={r.user.email}
-                    extra={r.isProspect ? <Pill tone="plum">Khách tiềm năng</Pill> : undefined}
-                  />
+                  <Link href={detailHref} className="block rounded-md hover:opacity-80" title="Xem chi tiết bài test">
+                    <PersonCell
+                      name={r.user.name}
+                      email={r.user.email}
+                      extra={r.isProspect ? <Pill tone="plum">Khách tiềm năng</Pill> : undefined}
+                    />
+                  </Link>
                 </td>
                 <td className="adm-num whitespace-nowrap">
                   {r.submittedAt ? formatVnDateTime(r.submittedAt) : "—"}
@@ -105,9 +107,12 @@ export function EntryTestTable({
                     <Pill tone="warn">Chưa xếp lớp</Pill>
                   )}
                 </td>
-                {showActions && (
-                  <td className="text-right whitespace-nowrap">
-                    {!r.isPlaced && (
+                <td className="text-right whitespace-nowrap">
+                  <div className="inline-flex items-center gap-2">
+                    <Link href={detailHref} className="adm-btn adm-btn-sm" aria-label={`Xem bài test của ${r.user.name}`}>
+                      Xem bài
+                    </Link>
+                    {showActions && !r.isPlaced && (
                       <Link
                         href={`/admin/students?student=${encodeURIComponent(r.user.id)}`}
                         className="adm-btn adm-btn-sm adm-btn-pri"
@@ -116,8 +121,8 @@ export function EntryTestTable({
                         Xếp lớp
                       </Link>
                     )}
-                  </td>
-                )}
+                  </div>
+                </td>
               </tr>
             );
           })}

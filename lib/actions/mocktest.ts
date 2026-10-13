@@ -1,6 +1,7 @@
 "use server";
 
 import { requirePracticeAccess } from "@/lib/practice-access";
+import { requireAnyPracticeAccess } from "@/lib/student-access";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { QUESTION_TYPES, type Skill } from "@/lib/question-types";
@@ -140,7 +141,8 @@ const TU_BANK_TYPE_IDS = ["write-from-dictation", "repeat-sentence"];
 
 export async function createTuMockTestSession(formData: FormData) {
   const randomize = formData.get("randomize") === "true";
-  const user = await requireUser();
+  // Người dùng thử Tủ cũng được thi thử Đề Tủ (chỉ gồm câu bộ Tủ).
+  const { user } = await requireAnyPracticeAccess();
   const questions = await prisma.question.findMany({
     where: {
       questionTypeId: { in: TU_BANK_TYPE_IDS },
@@ -239,9 +241,10 @@ export async function startAssignmentMockAction(assignmentId: string): Promise<{
 }
 
 export async function advanceMockTestSession(sessionId: string) {
-  const user = await requireUser();
+  const { user, access } = await requireAnyPracticeAccess();
   const session = await prisma.mockTestSession.findFirstOrThrow({
-    where: { id: sessionId, userId: user.id },
+    // Người dùng thử Tủ chỉ có lượt thi thử Đề Tủ.
+    where: { id: sessionId, userId: user.id, ...(access === "tu-trial" ? { mode: "tu" } : {}) },
   });
 
   const nextIndex = session.currentIndex + 1;
@@ -339,7 +342,7 @@ export async function submitMockAnswerAndAdvance(
 }
 
 export async function deleteMockTestSession(sessionId: string) {
-  const user = await requireUser();
+  const { user } = await requireAnyPracticeAccess();
   await prisma.mockTestSession.deleteMany({
     where: { id: sessionId, userId: user.id },
   });

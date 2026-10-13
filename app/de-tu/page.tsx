@@ -7,6 +7,7 @@ import { hasRole, hasAnyRole } from "@/lib/auth-helpers";
 import { getUserAvatarUrl } from "@/lib/dashboard-queries";
 import { getActiveClassInfo } from "@/lib/student-overview-queries";
 import { getTuOverview, getTuQuickReportStats } from "@/lib/tu-queries";
+import { hasTuTrialAccess } from "@/lib/student-access";
 
 export default async function DeTuPage() {
   const session = await auth();
@@ -32,7 +33,9 @@ export default async function DeTuPage() {
     getTuQuickReportStats(user.id),
   ]);
 
-  if (!classInfo) redirect("/test-dau-vao");
+  // Học viên có lớp, hoặc tài khoản trong danh sách mời dùng thử Tủ.
+  const tuTrial = classInfo ? false : await hasTuTrialAccess(user.id);
+  if (!classInfo && !tuTrial) redirect("/test-dau-vao");
 
   return (
     <RailShell
@@ -40,6 +43,7 @@ export default async function DeTuPage() {
       headline={<>Chào <strong className="font-semibold">{user.name ?? user.email ?? "bạn"}</strong></>}
       user={{ name: user.name ?? user.email ?? "Học viên", avatarUrl }}
       hasActiveClass={classInfo !== null}
+      hasTuAccess={classInfo !== null || tuTrial}
     >
       <TuOverviewView overview={overview} stats={stats} />
     </RailShell>

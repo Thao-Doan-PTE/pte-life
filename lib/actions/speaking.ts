@@ -5,7 +5,8 @@ import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { del, put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
-import { clampText, requirePracticeAccess } from "@/lib/practice-access";
+import { clampText } from "@/lib/practice-access";
+import { assertQuestionAllowed, requireAnyPracticeAccess } from "@/lib/student-access";
 import { consumeRateLimit, consumeRateLimits } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { detectAudio } from "@/lib/file-signature";
@@ -121,7 +122,8 @@ export async function submitSpeakingAttemptAction(
   audioForm?: FormData,
   mockSessionId?: string
 ): Promise<SpeakingSubmitResult> {
-  const user = await requirePracticeAccess();
+  // Người dùng thử Tủ chỉ được chấm câu RS thuộc bộ Tủ (kiểm tra sau khi tải câu).
+  const { user, access } = await requireAnyPracticeAccess();
   if (typeof questionId !== "string" || questionId.length === 0 || questionId.length > 64) {
     throw new Error("Câu hỏi không hợp lệ.");
   }
@@ -133,6 +135,7 @@ export async function submitSpeakingAttemptAction(
   if (!SPEAKING_TASK_TYPES.has(question.questionTypeId)) {
     throw new Error("Câu hỏi này không phải dạng Speaking.");
   }
+  assertQuestionAllowed(access, question);
   const taskType = question.questionTypeId as SpeakingTaskType;
 
   if (!(await consumeRateLimits(["aiGradeUser", user.id], ["aiGradeUserDay", user.id]))) {

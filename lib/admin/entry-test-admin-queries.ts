@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import { ENTRY_TEST_SECTIONS } from "@/lib/entry-test-data";
-import { gradeEntryTestAttempt } from "@/lib/entry-test-grading";
+import type { ConsultationStatus, EntryTestPurpose } from "@/lib/generated/prisma/enums";
+import { ENTRY_TEST_SECTIONS, type EntryTestQuestion, type EntryTestSection } from "@/lib/entry-test-data";
+import { gradeEntryTestAttempt, gradeEntryTestQuestion } from "@/lib/entry-test-grading";
+import { normalizeEmail } from "@/lib/user-email";
 
 /** Truy vấn cho trang Admin "Test đầu vào" (HANDOFF §4.3). Module server thường
  * (không phải "use server") — chỉ gọi từ trang đã kiểm tra quyền
@@ -27,6 +29,10 @@ export const ENTRY_TEST_SCALE = {
   autoSections: EMPTY_SUMMARY.sections.filter((s) => !s.pending).map(sectionInfo),
   teacherSections: EMPTY_SUMMARY.sections.filter((s) => s.pending).map(sectionInfo),
 };
+
+/** Phần do giáo viên chấm tay (Speaking/Listening ở đề hiện tại) — suy ra từ hàm
+ * chấm thay vì hard-code, giống ENTRY_TEST_SCALE. */
+const TEACHER_SECTION_KEYS = new Set(EMPTY_SUMMARY.sections.filter((s) => s.pending).map((s) => s.key));
 
 const SUBMITTED_STATUSES = ["SUBMITTED", "GRADED"] as const;
 
@@ -174,4 +180,307 @@ export async function getNewConsultationRequests(limit = 8) {
     prisma.consultationRequest.count({ where: { status: "NEW" } }),
   ]);
   return { rows, total };
+}
+
+/* ------------------------------------------------------------------ */
+/* Chi tiết 1 lượt test (/admin/entry-tests/[attemptId])               */
+/* ------------------------------------------------------------------ */
+
+export interface EntryTestDetailItem {
+  question: EntryTestQuestion;
+  /** Câu trả lời đã lưu (EntryTestAnswer.responseText); null = không có bản ghi. */
+  responseText: string | null;
+  /** File ghi âm (Speaking S1) — chỉ giữ đường dẫn /uploads/... hoặc https. */
+  audioUrl: string | null;
+  /** Các đáp án chuẩn được chấp nhận; null = câu không có đáp án chuẩn. */
+  correctAnswers: string[] | null;
+  /** Điểm của câu; null khi đang chờ giáo viên chấm. */
+  pointsAwarded: number | null;
+  /** Câu chờ giáo viên chấm (Speaking/Listening, hoặc chưa có đáp án chuẩn). */
+  pending: boolean;
+  isCorrect: boolean | null;
+  /** Câu tự chấm có điểm lưu lúc nộp khác điểm chấm lại theo đáp án hiện tại
+   * (đáp án được sửa sau khi nộp). Điểm hiển thị vẫn là điểm đã lưu. */
+  keyChanged: boolean;
+  /** Điểm chấm lại theo đáp án hiện tại — chỉ có nghĩa khi keyChanged. */
+  regradedPoints: number | null;
+}
+
+export interface EntryTestDetailSection {
+  section: EntryTestSection;
+  /** Phần do giáo viên chấm tay (không tự chấm). */
+  teacherGraded: boolean;
+  /** Điểm cả phần; null khi còn câu chờ chấm. */
+  pointsAwarded: number | null;
+  pointsMax: number;
+  items: EntryTestDetailItem[];
+}
+
+export interface EntryTestLeadInfo {
+  name: string;
+  /** Chỉ có giá trị khi người xem có quyền viewStudents. */
+  phone: string | null;
+  email: string | null;
+  targetScore: string;
+  purpose: EntryTestPurpose;
+  examTimeline: string;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  createdAt: Date;
+}
+
+export interface EntryTestConsultationInfo {
+  id: string;
+  phone: string;
+  topic: string;
+  preferredDate: Date;
+  timeSlot: string;
+  note: string | null;
+  status: ConsultationStatus;
+  createdAt: Date;
+}
+
+export interface EntryTestAttemptDetail {
+  id: string;
+  status: "IN_PROGRESS" | "SUBMITTED" | "GRADED";
+  startedAt: Date;
+  submittedAt: Date | null;
+  autoSubmitted: boolean;
+  scoreAuto: number | null;
+  scoreSpeaking: number | null;
+  scoreTotal: number | null;
+  level: string | null;
+  gradedAt: Date | null;
+  gradedByName: string | null;
+  user: { id: string; name: string; email: string; examPackage: "academic" | "core" };
+  /** Lớp đang học (ACTIVE) — với giáo viên chỉ gồm lớp của mình. */
+  activeClasses: { id: string; code: string; name: string }[];
+  isPlaced: boolean;
+  isProspect: boolean;
+  sections: EntryTestDetailSection[];
+  /** Đăng ký Test đầu vào (EntryTestLead) mới nhất khớp email, không phân biệt hoa thường. */
+  lead: EntryTestLeadInfo | null;
+  /** Số bản đăng ký khớp email (có thể > 1 nếu đăng ký nhiều lần). */
+  leadCount: number;
+  /** null = người xem không có quyền viewStudents (không tải). */
+  consultations: EntryTestConsultationInfo[] | null;
+}
+
+/** File ghi âm chỉ được phát khi là file tải lên của hệ thống (/uploads/...) hoặc https (Vercel Blob). */
+function safeAudioUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("/uploads/") && !url.includes("..")) return url;
+  try {
+    return new URL(url).protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+function correctAnswersOf(q: EntryTestQuestion): string[] | null {
+  switch (q.type) {
+    case "read_aloud":
+      return null;
+    case "mcq":
+      return [q.answer];
+    case "dropdown_gap":
+      return q.answer == null ? null : [q.answer];
+    case "word_form":
+    case "reorder":
+      return q.answer.length > 0 ? q.answer : null;
+    case "gap_fill":
+    case "short_answer":
+      return q.answer && q.answer.length > 0 ? q.answer : null;
+    default:
+      return null;
+  }
+}
+
+const CONSULTATION_LIMIT = 20;
+
+/**
+ * Chi tiết 1 lượt test đã nộp. Áp ĐÚNG điều kiện của danh sách (attemptWhere):
+ * chỉ lượt SUBMITTED/GRADED; giáo viên thuần chỉ thấy người làm test đang học ở
+ * lớp mình → ngoài phạm vi trả null (trang gọi notFound, không lộ việc lượt test
+ * tồn tại). SĐT và yêu cầu tư vấn chỉ tải khi includeContact (quyền viewStudents).
+ */
+export async function getEntryTestAttemptDetail({
+  attemptId,
+  scopedClassIds,
+  includeContact,
+}: {
+  attemptId: string;
+  scopedClassIds: string[] | null;
+  includeContact: boolean;
+}): Promise<EntryTestAttemptDetail | null> {
+  if (!attemptId || attemptId.length > 64) return null;
+
+  const attempt = await prisma.entryTestAttempt.findFirst({
+    where: { ...attemptWhere("all", scopedClassIds), id: attemptId },
+    select: {
+      id: true,
+      status: true,
+      startedAt: true,
+      submittedAt: true,
+      autoSubmitted: true,
+      scoreAuto: true,
+      scoreSpeaking: true,
+      scoreTotal: true,
+      level: true,
+      gradedAt: true,
+      gradedBy: { select: { name: true } },
+      answers: {
+        select: { questionId: true, responseText: true, audioUrl: true, isCorrect: true, pointsAwarded: true },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          examPackage: true,
+          ...(scopedClassIds ? {} : { _count: { select: { classEnrollments: true } } }),
+          classEnrollments: {
+            where: { status: "ACTIVE", ...(scopedClassIds ? { classId: { in: scopedClassIds } } : {}) },
+            orderBy: { joinedAt: "desc" },
+            select: { class: { select: { id: true, code: true, name: true } } },
+          },
+        },
+      },
+    },
+  });
+  if (!attempt) return null;
+
+  // EntryTestLead không có khoá tới User — khớp theo email, không phân biệt hoa
+  // thường. Prisma dịch "insensitive" thành ILIKE nên escape %/_ (như
+  // findUserByEmail), rồi lọc lại chính xác ở dưới cho chắc.
+  const email = normalizeEmail(attempt.user.email);
+  const escaped = email.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+  const [leadRows, consultationRows] = await Promise.all([
+    email
+      ? prisma.entryTestLead.findMany({
+          where: { OR: [{ email }, { email: { equals: escaped, mode: "insensitive" } }] },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          select: {
+            name: true,
+            phone: includeContact,
+            email: true,
+            targetScore: true,
+            purpose: true,
+            examTimeline: true,
+            utmSource: true,
+            utmMedium: true,
+            utmCampaign: true,
+            createdAt: true,
+          },
+        })
+      : Promise.resolve([]),
+    includeContact
+      ? prisma.consultationRequest.findMany({
+          where: { userId: attempt.user.id },
+          orderBy: { createdAt: "desc" },
+          take: CONSULTATION_LIMIT,
+          select: {
+            id: true,
+            phone: true,
+            topic: true,
+            preferredDate: true,
+            timeSlot: true,
+            note: true,
+            status: true,
+            createdAt: true,
+          },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  const leads = leadRows.filter((l) => normalizeEmail(l.email ?? "") === email);
+  const latestLead = leads[0];
+  const lead: EntryTestLeadInfo | null = latestLead
+    ? {
+        name: latestLead.name,
+        phone: includeContact ? (latestLead.phone ?? null) : null,
+        email: latestLead.email,
+        targetScore: latestLead.targetScore,
+        purpose: latestLead.purpose,
+        examTimeline: latestLead.examTimeline,
+        utmSource: latestLead.utmSource,
+        utmMedium: latestLead.utmMedium,
+        utmCampaign: latestLead.utmCampaign,
+        createdAt: latestLead.createdAt,
+      }
+    : null;
+
+  const answerById = new Map(attempt.answers.map((a) => [a.questionId, a]));
+  const isGraded = attempt.status === "GRADED";
+
+  const sections: EntryTestDetailSection[] = ENTRY_TEST_SECTIONS.map((section) => {
+    const teacherGraded = TEACHER_SECTION_KEYS.has(section.key);
+    const items: EntryTestDetailItem[] = section.items.map((q) => {
+      const saved = answerById.get(q.id);
+      const responseText = saved?.responseText ?? null;
+      let pointsAwarded: number | null;
+      let regradedPoints: number | null = null;
+      let keyChanged = false;
+      if (teacherGraded) {
+        // Phần chấm tay: chỉ coi là có điểm khi lượt đã được giáo viên chấm.
+        pointsAwarded = isGraded ? (saved?.pointsAwarded ?? null) : null;
+      } else {
+        // Điểm đã lưu lúc nộp là chuẩn (scoreAuto tính từ đó); thiếu bản ghi thì
+        // chấm lại từ câu trả lời. Đáp án còn có thể đổi trong giai đoạn thử
+        // nghiệm → đánh dấu câu mà điểm lưu khác điểm chấm theo đáp án hiện tại.
+        regradedPoints = gradeEntryTestQuestion(q, responseText);
+        const savedPoints = saved?.pointsAwarded ?? null;
+        keyChanged = savedPoints != null && regradedPoints != null && regradedPoints !== savedPoints;
+        pointsAwarded = savedPoints ?? regradedPoints;
+      }
+      return {
+        question: q,
+        responseText,
+        audioUrl: safeAudioUrl(saved?.audioUrl),
+        correctAnswers: correctAnswersOf(q),
+        pointsAwarded,
+        pending: pointsAwarded == null,
+        isCorrect: pointsAwarded == null ? null : (saved?.isCorrect ?? pointsAwarded > 0),
+        keyChanged,
+        regradedPoints: keyChanged ? regradedPoints : null,
+      };
+    });
+    const anyPending = items.some((i) => i.pending);
+    let pointsAwarded: number | null = anyPending ? null : items.reduce((sum, i) => sum + (i.pointsAwarded ?? 0), 0);
+    if (section.key === "speaking" && isGraded && attempt.scoreSpeaking != null) pointsAwarded = attempt.scoreSpeaking;
+    return { section, teacherGraded, pointsAwarded, pointsMax: section.pointsLabel, items };
+  });
+
+  const activeClasses = attempt.user.classEnrollments.map((e) => e.class);
+  const enrollmentCount = "_count" in attempt.user ? attempt.user._count.classEnrollments : 1;
+
+  return {
+    id: attempt.id,
+    status: attempt.status,
+    startedAt: attempt.startedAt,
+    submittedAt: attempt.submittedAt,
+    autoSubmitted: attempt.autoSubmitted,
+    scoreAuto: attempt.scoreAuto,
+    scoreSpeaking: attempt.scoreSpeaking,
+    scoreTotal: attempt.scoreTotal,
+    level: attempt.level,
+    gradedAt: attempt.gradedAt,
+    gradedByName: attempt.gradedBy?.name ?? null,
+    user: {
+      id: attempt.user.id,
+      name: attempt.user.name,
+      email: attempt.user.email,
+      examPackage: attempt.user.examPackage,
+    },
+    activeClasses,
+    isPlaced: scopedClassIds ? true : activeClasses.length > 0,
+    isProspect: !scopedClassIds && activeClasses.length === 0 && enrollmentCount === 0,
+    sections,
+    lead,
+    leadCount: leads.length,
+    consultations: consultationRows,
+  };
 }

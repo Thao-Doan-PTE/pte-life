@@ -5,6 +5,7 @@ import { StageCard } from "@/components/home/stage-intro";
 import { hasRole, hasAnyRole } from "@/lib/auth-helpers";
 import { getUserAvatarUrl } from "@/lib/dashboard-queries";
 import { getActiveClassInfo } from "@/lib/student-overview-queries";
+import { hasTuTrialAccess } from "@/lib/student-access";
 
 export default async function ThongBaoPage() {
   const session = await auth();
@@ -17,6 +18,8 @@ export default async function ThongBaoPage() {
   }
 
   const [avatarUrl, classInfo] = await Promise.all([getUserAvatarUrl(user.id), getActiveClassInfo(user.id)]);
+  // Chưa có lớp: mở mục "Luyện đề Tủ" nếu nằm trong danh sách mời dùng thử.
+  const hasTuAccess = classInfo !== null || (await hasTuTrialAccess(user.id));
 
   return (
     <RailShell
@@ -24,6 +27,7 @@ export default async function ThongBaoPage() {
       headline={<>Thông báo</>}
       user={{ name: user.name ?? user.email ?? "Học viên", avatarUrl }}
       hasActiveClass={classInfo !== null}
+      hasTuAccess={hasTuAccess}
     >
       <div className="flex flex-col gap-5">
         <div>

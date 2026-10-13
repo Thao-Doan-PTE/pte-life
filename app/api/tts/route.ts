@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePracticeAccess } from "@/lib/practice-access";
+import { requireAnyPracticeAccess } from "@/lib/student-access";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import {
   isAzureTtsConfigured,
@@ -19,7 +19,8 @@ const audioCache = new Map<string, ArrayBuffer>();
 export async function POST(request: NextRequest) {
   let userId: string;
   try {
-    userId = (await requirePracticeAccess()).id;
+    // Người dùng thử Tủ cần giọng đọc cho WFD Tủ — vẫn bị giới hạn ttsUser.
+    userId = (await requireAnyPracticeAccess()).user.id;
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

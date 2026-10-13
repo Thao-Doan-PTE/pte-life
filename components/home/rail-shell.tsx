@@ -21,7 +21,7 @@ const ICONS = {
   taikhoan: UserCog,
 };
 
-function buildEntries(role: Role, hasActiveClass: boolean): RailEntry[] {
+function buildEntries(role: Role, hasActiveClass: boolean, hasTuAccess: boolean): RailEntry[] {
   const iconClass = "size-5";
   if (role === "teacher") {
     return [
@@ -44,7 +44,7 @@ function buildEntries(role: Role, hasActiveClass: boolean): RailEntry[] {
       : [{ view: "test", href: "/test-dau-vao", title: "Test đầu vào", icon: <ICONS.test className={iconClass} strokeWidth={1.8} />, group: "Học tập" }]),
     { view: "overview", href: "/", title: "Tổng quan của tôi", icon: <ICONS.overview className={iconClass} strokeWidth={1.8} />, group: "Học tập" },
     { view: "practice", href: "/luyen-de-pte", title: "Luyện đề PTE", icon: <ICONS.practice className={iconClass} strokeWidth={1.8} />, group: "Học tập", locked: !hasActiveClass },
-    { view: "tu", href: "/de-tu", title: "Luyện đề Tủ", icon: <ICONS.tu className={iconClass} strokeWidth={1.8} />, group: "Học tập", locked: !hasActiveClass },
+    { view: "tu", href: "/de-tu", title: "Luyện đề Tủ", icon: <ICONS.tu className={iconClass} strokeWidth={1.8} />, group: "Học tập", locked: !hasTuAccess },
     { view: "lop-hoc", href: "/lop-hoc", title: "Lớp của tôi", icon: <ICONS.lop className={iconClass} strokeWidth={1.8} />, group: "Lớp học", locked: !hasActiveClass },
     {
       view: "bai-giao",
@@ -111,6 +111,7 @@ export function RailShell({
   headline,
   user,
   hasActiveClass = false,
+  hasTuAccess,
   fullBleed = false,
   children,
 }: {
@@ -122,11 +123,14 @@ export function RailShell({
    * SPEC_TestDauVao_PTE.md: đánh giá trình độ TRƯỚC khi tư vấn khóa). Không
    * ảnh hưởng guest/teacher. */
   hasActiveClass?: boolean;
+  /** Mở mục "Luyện đề Tủ" — mặc định theo hasActiveClass; truyền true cho tài
+   * khoản trong danh sách mời dùng thử Tủ (chưa có lớp). */
+  hasTuAccess?: boolean;
   /** Vùng nội dung tràn hết chiều rộng, nền trắng, không padding — trang tự lo khoảng đệm bên trong. */
   fullBleed?: boolean;
   children: ReactNode;
 }) {
-  const entries = buildEntries(role, hasActiveClass);
+  const entries = buildEntries(role, hasActiveClass, hasTuAccess ?? hasActiveClass);
   const blocks = buildBlocks(role);
 
   return (

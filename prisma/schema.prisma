@@ -87,6 +87,10 @@ model User {
   reservedUntil    DateTime?
   /// Điểm mục tiêu PTE (10–90) của học viên.
   targetScore      Int?
+  /// Được dùng thử Luyện đề Tủ tới hết ngày này (null = không) — dành cho danh
+  /// sách mời chạy thử, kể cả tài khoản chưa được xếp lớp. Chỉ mở bộ đề Tủ
+  /// (WFD, RS); Luyện đề PTE và các phần khác vẫn cần lớp học như cũ.
+  tuTrialUntil     DateTime?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 

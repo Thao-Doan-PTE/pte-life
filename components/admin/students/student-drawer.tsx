@@ -3,10 +3,11 @@
 import { useState, type ReactNode } from "react";
 import { TriangleAlert, X } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { InitialsAvatar, PackageTag, ProgressBar } from "@/components/admin/admin-ui";
+import { InitialsAvatar, PackageTag, Pill, ProgressBar } from "@/components/admin/admin-ui";
 import { PlanBox } from "@/components/admin/students/plan-box";
 import { PlaceClassBox } from "@/components/admin/students/place-class-box";
 import { TargetScoreBox } from "@/components/admin/students/target-score-box";
+import { TuTrialBox } from "@/components/admin/students/tu-trial-box";
 import { classWithTeacher, entryTargetLabel, targetSourceLabel } from "@/components/admin/students/student-format";
 import { PACKAGE_LABEL } from "@/lib/admin/student-status";
 import type { PlaceableClass, StudentDetail, StudentRow } from "@/lib/admin/student-queries";
@@ -166,6 +167,7 @@ function DrawerContent({
         <div className="flex flex-wrap items-center gap-2">
           <PackageTag pkg={row.examPackage} />
           <span className={`adm-pill ${row.status.pill}`}>{row.status.label}</span>
+          {row.tuTrialActive && <Pill tone="plum">Dùng thử Tủ đến {row.tuTrialLabel}</Pill>}
           <span className="adm-tag">{classLabel ?? "Chưa xếp lớp"}</span>
           {row.activeClasses.length > 1 && (
             <span className="adm-tag" title={row.activeClasses.map((c) => c.code).join(", ")}>
@@ -220,6 +222,12 @@ function DrawerContent({
         {canManagePlans && (
           <Section title="Gói học & thời hạn">
             <PlanBox key={row.id} row={row} />
+          </Section>
+        )}
+
+        {canManagePlans && (
+          <Section title="Dùng thử Luyện đề Tủ">
+            <TuTrialBox key={row.id} row={row} />
           </Section>
         )}
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
-import { requirePracticeAccess } from "@/lib/practice-access";
+import { assertQuestionAllowed, requireAnyPracticeAccess } from "@/lib/student-access";
 import { toOpaqueParagraphId } from "@/lib/opaque-id";
 import { prisma } from "@/lib/prisma";
 import { scoreAttempt } from "@/lib/scoring/rule-based";
@@ -32,7 +32,8 @@ export async function submitAttemptAction(
   durationSec = 0,
   mockSessionId?: string
 ): Promise<ScoreResult> {
-  const user = await requirePracticeAccess();
+  // Học viên có lớp làm mọi câu; người dùng thử Tủ chỉ làm câu thuộc bộ Tủ (kiểm tra sau khi tải câu).
+  const { user, access } = await requireAnyPracticeAccess();
   // Câu trả lời được lưu nguyên vào DB — chặn payload khổng lồ.
   if (JSON.stringify(response ?? null).length > 20_000) {
     throw new Error("Câu trả lời quá dài.");
@@ -41,6 +42,7 @@ export async function submitAttemptAction(
   const question = await prisma.question.findUniqueOrThrow({
     where: { id: questionId },
   });
+  assertQuestionAllowed(access, question);
 
   const content = question.content as Record<string, unknown>;
 

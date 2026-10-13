@@ -10,6 +10,7 @@ import { getOrCreateEntryTestAttempt } from "@/lib/actions/entry-test-attempt";
 import { EntryTestShell } from "@/components/entry-test/entry-test-shell";
 import { EntryTestResult } from "@/components/entry-test/entry-test-result";
 import { EntryTestRetakeButton } from "@/components/entry-test/entry-test-retake-button";
+import { hasTuTrialAccess } from "@/lib/student-access";
 
 export default async function TestDauVaoPage() {
   const session = await auth();
@@ -31,6 +32,8 @@ export default async function TestDauVaoPage() {
   const [avatarUrl, classInfo] = await Promise.all([getUserAvatarUrl(user.id), getActiveClassInfo(user.id)]);
   const hasActiveClass = classInfo !== null;
 
+  // Tài khoản chưa có lớp nhưng nằm trong danh sách mời dùng thử: mở mục "Luyện đề Tủ" trên rail.
+  let hasTuAccess = hasActiveClass;
   let content;
   if (hasActiveClass) {
     content = (
@@ -46,7 +49,8 @@ export default async function TestDauVaoPage() {
       </div>
     );
   } else {
-    const latest = await getLatestEntryTestAttempt(user.id);
+    const [latest, tuTrial] = await Promise.all([getLatestEntryTestAttempt(user.id), hasTuTrialAccess(user.id)]);
+    hasTuAccess = tuTrial;
     if (!latest || latest.status === "IN_PROGRESS") {
       const attempt = await getOrCreateEntryTestAttempt();
       if ("error" in attempt) {
@@ -86,6 +90,7 @@ export default async function TestDauVaoPage() {
       headline={<>Chào <strong className="font-semibold">{user.name ?? user.email ?? "bạn"}</strong></>}
       user={{ name: user.name ?? user.email ?? "Học viên", avatarUrl }}
       hasActiveClass={hasActiveClass}
+      hasTuAccess={hasTuAccess}
       fullBleed
     >
       {content}

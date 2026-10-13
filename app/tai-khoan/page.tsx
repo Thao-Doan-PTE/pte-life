@@ -6,6 +6,9 @@ import { AccountAvatarUpload } from "@/components/home/account-avatar-upload";
 import { hasRole, hasAnyRole } from "@/lib/auth-helpers";
 import { getUserAvatarUrl } from "@/lib/dashboard-queries";
 import { getActiveClassInfo } from "@/lib/student-overview-queries";
+import { prisma } from "@/lib/prisma";
+import { isTuTrialActive } from "@/lib/student-access";
+import { formatVnDate } from "@/lib/admin/student-status";
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -32,6 +35,9 @@ export default async function TaiKhoanPage() {
 
   const [avatarUrl, classInfo] = await Promise.all([getUserAvatarUrl(user.id), getActiveClassInfo(user.id)]);
   const expiresAtLabel = new Date(user.expiresAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  // Chưa có lớp: tra danh sách mời dùng thử Luyện đề Tủ (mở mục trên rail + hiện hạn dùng thử).
+  const trialRow = classInfo ? null : await prisma.user.findUnique({ where: { id: user.id }, select: { tuTrialUntil: true } });
+  const tuTrialUntil = trialRow?.tuTrialUntil && isTuTrialActive(trialRow.tuTrialUntil) ? trialRow.tuTrialUntil : null;
 
   return (
     <RailShell
@@ -39,6 +45,7 @@ export default async function TaiKhoanPage() {
       headline={<>Hồ sơ & cài đặt</>}
       user={{ name: user.name ?? user.email ?? "Học viên", avatarUrl }}
       hasActiveClass={classInfo !== null}
+      hasTuAccess={classInfo !== null || tuTrialUntil !== null}
     >
       <div className="flex flex-col gap-5">
         <div>
@@ -73,6 +80,7 @@ export default async function TaiKhoanPage() {
             <>
               <InfoRow label="Loại tài khoản" value="Đăng ký làm test đầu vào" />
               <InfoRow label="Trạng thái" value="Chưa là học viên PTE-Life" />
+              {tuTrialUntil && <InfoRow label="Dùng thử Luyện đề Tủ" value={`Đến ${formatVnDate(tuTrialUntil)}`} />}
             </>
           )}
         </StageCard>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Check, Lock } from "lucide-react";
+import { ArrowRight, Check, Lock, LockOpen } from "lucide-react";
 import { ConsultationDialog } from "@/components/entry-test/consultation-dialog";
 import { COURSE_GOALS } from "@/lib/course-goals";
 import { ScoreConversionTable } from "@/components/home/score-conversion-table";
@@ -21,9 +21,10 @@ const SKILLS = [
   { label: "Nghe", width: "55%" },
 ];
 
+/** Key "tu": mục duy nhất mở sớm cho tài khoản trong danh sách mời dùng thử Tủ. */
 const LOCKED_FEATURES = [
   { title: "Luyện đề PTE", desc: "Đề thi thử theo cấu trúc PTE Academic, chấm tự động." },
-  { title: "Luyện đề Tủ", desc: "Bộ câu hỏi luyện tập trọng tâm, cập nhật hằng tuần." },
+  { key: "tu", title: "Luyện đề Tủ", desc: "Bộ câu hỏi luyện tập trọng tâm, cập nhật hằng tuần." },
   { title: "Bài giáo viên giao", desc: "Nhận bài được giao, hạn nộp và nhận xét của giáo viên." },
   { title: "Lịch học và tiến độ", desc: "Lịch lớp, mục tiêu tuần và biểu đồ luyện tập của bạn." },
 ];
@@ -58,20 +59,77 @@ function LockedPreview() {
   );
 }
 
+function UnlockedPreview() {
+  return (
+    <div className="relative px-4 pt-5 pb-4" style={{ background: "var(--rail-ok-tint)" }} aria-hidden="true">
+      <span className="absolute top-3 right-3 grid size-8 place-items-center rounded-full" style={{ background: "var(--rail-bg)", color: "var(--rail-ok)" }}>
+        <LockOpen className="size-3.5" />
+      </span>
+      <div className="mb-2 h-2.5 w-[85%] rounded-full" style={{ background: "var(--rail-bg)" }} />
+      <div className="mb-4 h-2.5 w-[55%] rounded-full" style={{ background: "var(--rail-bg)" }} />
+      <div className="grid grid-cols-3 gap-2">
+        <div className="h-7 rounded-md" style={{ background: "var(--rail-bg)" }} />
+        <div className="h-7 rounded-md" style={{ background: "var(--rail-red-soft)" }} />
+        <div className="h-7 rounded-md" style={{ background: "var(--rail-bg)" }} />
+      </div>
+    </div>
+  );
+}
+
+/** Thẻ mời dùng thử Luyện đề Tủ — chỉ hiện cho tài khoản trong danh sách mời. */
+function TuTrialInviteCard({ untilLabel }: { untilLabel: string }) {
+  return (
+    <section
+      data-card
+      className="flex flex-col items-start gap-5 rounded-2xl border p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7"
+      style={{ background: "var(--rail-red-tint)", borderColor: "var(--rail-red-soft)", boxShadow: CARD_SHADOW }}
+    >
+      <div className="min-w-0">
+        <span
+          className="mb-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold tracking-[0.1em] uppercase"
+          style={{ background: "var(--rail-bg)", color: "var(--rail-red-text)" }}
+        >
+          <LockOpen className="size-3.5" /> Dùng thử
+        </span>
+        <h2 className="m-0 mb-1.5 text-[clamp(20px,2.4vw,26px)] leading-[1.2] font-bold text-balance" style={{ color: "var(--rail-charcoal)" }}>
+          Bạn được mời dùng thử Luyện đề Tủ đến {untilLabel}
+        </h2>
+        <p className="m-0 max-w-[60ch] text-[15px]" style={{ color: "var(--rail-charcoal-2)" }}>
+          Luyện Write From Dictation, Repeat Sentence theo bộ câu hỏi Tủ và làm bài thi thử Đề Tủ, chấm tự động.
+        </p>
+      </div>
+      <Link
+        href="/de-tu"
+        className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--rail-red)] px-6 py-3 text-[16px] font-bold transition-colors hover:bg-[var(--rail-red-hover)] sm:w-auto"
+        style={{ color: "var(--rail-cta-text)" }}
+      >
+        Vào Luyện đề Tủ <ArrowRight className="size-4" />
+      </Link>
+    </section>
+  );
+}
+
 export function NewAccountOverview({
   name,
   email,
   testStatus,
+  tuTrialUntilLabel = null,
 }: {
   name: string;
   email: string;
   testStatus: TestStatus;
+  /** Hạn dùng thử Luyện đề Tủ (dd/mm/yyyy) khi tài khoản nằm trong danh sách
+   * mời và còn hạn; null = không được mời — giữ nguyên giao diện cũ. */
+  tuTrialUntilLabel?: string | null;
 }) {
   const displayName = name.trim() || "bạn";
   const copy = HERO_COPY[testStatus];
+  const tuTrial = tuTrialUntilLabel !== null;
 
   return (
     <div className="flex flex-col gap-10">
+      {tuTrial && <TuTrialInviteCard untilLabel={tuTrialUntilLabel} />}
+
       <section>
         <h2 className="m-0 mb-2 text-[clamp(26px,3.2vw,38px)] leading-[1.15] font-bold text-balance" style={{ color: "var(--rail-charcoal)" }}>
           Chào {displayName}, bắt đầu hành trình PTE của bạn
@@ -99,8 +157,7 @@ export function NewAccountOverview({
             </ul>
             <Link
               href="/test-dau-vao"
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-[16px] font-bold text-white transition-colors hover:bg-[var(--rail-red-hover)]"
-              style={{ background: "var(--rail-red)" }}
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--rail-red)] px-6 py-3 text-[16px] font-bold text-white transition-colors hover:bg-[var(--rail-red-hover)]"
             >
               {copy.cta} <ArrowRight className="size-4" />
             </Link>
@@ -149,21 +206,50 @@ export function NewAccountOverview({
       </section>
 
       <section>
-        <SectionTitle title="Học viên PTE-Life được dùng thêm" sub="Những mục đang khóa trong menu sẽ mở ngay khi bạn ghi danh khóa học." />
+        <SectionTitle
+          title="Học viên PTE-Life được dùng thêm"
+          sub={
+            tuTrial
+              ? "Luyện đề Tủ đã mở cho bạn dùng thử. Các mục còn khóa trong menu sẽ mở khi bạn ghi danh khóa học."
+              : "Những mục đang khóa trong menu sẽ mở ngay khi bạn ghi danh khóa học."
+          }
+        />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {LOCKED_FEATURES.map((f) => (
-            <div key={f.title} data-card className="overflow-hidden rounded-xl border" style={{ background: "var(--rail-bg)", borderColor: "var(--rail-line)" }}>
-              <LockedPreview />
-              <div className="p-4">
-                <p className="m-0 mb-1 text-[16px] font-bold" style={{ color: "var(--rail-charcoal)" }}>
-                  {f.title}
-                </p>
-                <p className="m-0 text-[14px] leading-relaxed" style={{ color: "var(--rail-ink-dim)" }}>
-                  {f.desc}
-                </p>
+          {LOCKED_FEATURES.map((f) => {
+            const unlocked = tuTrial && f.key === "tu";
+            return (
+              <div
+                key={f.title}
+                data-card
+                className="flex flex-col overflow-hidden rounded-xl border"
+                style={{ background: "var(--rail-bg)", borderColor: unlocked ? "var(--rail-ok)" : "var(--rail-line)" }}
+              >
+                {unlocked ? <UnlockedPreview /> : <LockedPreview />}
+                <div className="flex flex-1 flex-col p-4">
+                  <p className="m-0 mb-1 flex flex-wrap items-center gap-2 text-[16px] font-bold" style={{ color: "var(--rail-charcoal)" }}>
+                    {f.title}
+                    {unlocked && (
+                      <span className="rounded-full px-2.5 py-0.5 text-[12px] font-bold" style={{ background: "var(--rail-ok-tint)", color: "var(--rail-ok)" }}>
+                        Đã mở · đến {tuTrialUntilLabel}
+                      </span>
+                    )}
+                  </p>
+                  <p className="m-0 text-[14px] leading-relaxed" style={{ color: "var(--rail-ink-dim)" }}>
+                    {f.desc}
+                  </p>
+                  {unlocked && (
+                    <Link
+                      href="/de-tu"
+                      className="mt-3 inline-flex w-fit items-center gap-1.5 text-[14px] font-bold hover:underline"
+                      style={{ color: "var(--rail-red-text)" }}
+                    >
+                      Vào luyện ngay <ArrowRight className="size-3.5" />
+                    </Link>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

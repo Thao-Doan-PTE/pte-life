@@ -1,6 +1,7 @@
 import { requireClassStudent } from "@/lib/require-class-student";
 
 export default async function MocktestLayout({ children }: { children: React.ReactNode }) {
-  await requireClassStudent();
+  // Cho cả người dùng thử Tủ qua layout — từng trang tự kiểm tra chặt phần Tủ.
+  await requireClassStudent({ allowTuTrial: true });
   return children;
 }

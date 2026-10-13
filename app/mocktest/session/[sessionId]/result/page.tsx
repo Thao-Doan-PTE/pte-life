@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/layout/app-shell";
@@ -20,7 +20,7 @@ export default async function MockTestResultPage({
 }) {
   // Chặn ở từng trang (không chỉ ở layout): khi chuyển trang phía trình duyệt,
   // Next.js có thể bỏ qua layout đã có sẵn.
-  await requireClassStudent();
+  const access = await requireClassStudent({ allowTuTrial: true });
   const { sessionId } = await params;
   const session = await auth();
   const userId = session!.user.id;
@@ -29,6 +29,8 @@ export default async function MockTestResultPage({
     where: { id: sessionId, userId },
   });
   if (!mockSession) notFound();
+  // Người dùng thử Tủ chỉ có lượt thi thử Đề Tủ.
+  if (access === "tu-trial" && mockSession.mode !== "tu") redirect("/de-tu");
 
   const results = await getSessionQuestionResults(
     userId,

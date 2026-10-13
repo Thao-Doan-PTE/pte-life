@@ -2,7 +2,7 @@ import { AdminContent, AdminPageHeader, Panel, SegLinks } from "@/components/adm
 import { EntryTestTable } from "@/components/admin/entry-tests/entry-test-table";
 import { ConsultationPanel } from "@/components/admin/entry-tests/consultation-panel";
 import { Pager } from "@/components/admin/entry-tests/pager";
-import { can, getScopedClassIds, requireAdminPage } from "@/lib/admin/permissions";
+import { can, getScopedClassIdsFor, requireAdminPage } from "@/lib/admin/permissions";
 import {
   ENTRY_TEST_ADMIN_PAGE_SIZE,
   ENTRY_TEST_SCALE,
@@ -21,7 +21,8 @@ export default async function AdminEntryTestsPage({
   searchParams: Promise<{ filter?: string; page?: string }>;
 }) {
   const user = await requireAdminPage("viewEntryTests");
-  const scopedClassIds = await getScopedClassIds(user);
+  // Cùng phạm vi với trang chi tiết /admin/entry-tests/[attemptId].
+  const scopedClassIds = await getScopedClassIdsFor(user, "viewEntryTests");
   const isTeacherScope = scopedClassIds !== null;
   const canViewStudents = can(user, "viewStudents");
 

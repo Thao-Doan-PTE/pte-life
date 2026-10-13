@@ -22,15 +22,16 @@ export default async function WfdListenPracticePage({
 }) {
   // Chặn ở từng trang (không chỉ ở layout): khi chuyển trang phía trình duyệt,
   // Next.js có thể bỏ qua layout đã có sẵn.
-  await requireClassStudent();
   const { skill, typeId } = await params;
+  const access = await requireClassStudent({ allowTuTrial: (typeId === "write-from-dictation" || typeId === "repeat-sentence") });
   const fields = CONTENT_FIELD_BY_TYPE[typeId];
 
   if (!VALID_SKILLS.includes(skill as Skill) || !fields) {
     notFound();
   }
 
-  const questions = await getQuestionsForType(typeId);
+  // Người dùng thử chỉ luyện nghe câu thuộc bộ đề Tủ.
+  const questions = await getQuestionsForType(typeId, access === "tu-trial" ? "TU" : undefined);
   const questionType = QUESTION_TYPES.find((t) => t.id === typeId);
   const typeName = questionType?.name ?? typeId;
   const typeCode = questionType?.code ?? "";

@@ -3,6 +3,7 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 import { QUESTION_TYPES, SKILL_LABELS, type ExamPackage, type Skill } from "@/lib/question-types";
 import { getRecentAttempts, getSkillProgress } from "@/lib/dashboard-queries";
 import { expiringStudentsWhere } from "@/lib/admin/overview-queries";
+import { isTuTrialActive } from "@/lib/student-access";
 import {
   formatVnDate,
   formatVnDateTime,
@@ -63,6 +64,12 @@ export interface StudentRow {
   target: StudentTarget | null;
   /** Tài khoản bị khoá (UserStatus INACTIVE). */
   locked: boolean;
+  /** Hạn dùng thử Luyện đề Tủ (ISO, hết ngày giờ VN) — null = chưa từng mời / đã tắt. */
+  tuTrialUntil: string | null;
+  /** Còn hạn dùng thử Tủ — cùng cách tính với phần chặn quyền (isTuTrialActive). */
+  tuTrialActive: boolean;
+  /** "dd/mm" (giờ VN) của tuTrialUntil để hiện nhãn ngắn; null nếu chưa mời. */
+  tuTrialLabel: string | null;
   /** Lớp đang học hiển thị (ưu tiên lớp đang lọc, sau đó lớp vào gần nhất). */
   activeClass: StudentClassRef | null;
   /** Mọi lớp ACTIVE của học viên, mới vào trước (1 học viên có thể ở nhiều lớp). */
@@ -93,11 +100,19 @@ export interface StudentListOptions {
    *   tạo từ Test đầu vào).
    * - bỏ trống: không lọc (tra 1 học viên theo id để mở drawer, kể cả khách tiềm năng). */
   placement?: "placed" | "never";
+  /** Chỉ tài khoản đang trong danh sách mời dùng thử Luyện đề Tủ (còn hạn). Người
+   * dùng thử thường chưa từng xếp lớp → nơi gọi để trống `placement`. */
+  tuTrial?: boolean;
 }
 
 function shortLevel(level: string | null): string | null {
   if (!level) return null;
   return level.replace(/^Mục tiêu\s+/i, "");
+}
+
+/** dd/mm theo giờ Việt Nam (nhãn ngắn "Dùng thử Tủ đến dd/mm"). */
+function formatVnDayMonth(date: Date): string {
+  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", timeZone: "Asia/Ho_Chi_Minh" });
 }
 
 export async function listStudents(opts: StudentListOptions = {}): Promise<StudentRow[]> {
@@ -106,6 +121,8 @@ export async function listStudents(opts: StudentListOptions = {}): Promise<Stude
   if (opts.attention) and.push(expiringStudentsWhere(now));
   if (opts.placement === "placed") and.push({ classEnrollments: { some: {} } });
   if (opts.placement === "never") and.push({ classEnrollments: { none: {} } });
+  // Cùng điều kiện với isTuTrialActive (còn hạn = tuTrialUntil ≥ lúc này).
+  if (opts.tuTrial) and.push({ tuTrialUntil: { gte: now } });
   if (opts.ids) and.push({ id: { in: opts.ids } });
   if (opts.examPackage) and.push({ examPackage: opts.examPackage });
   if (opts.classId) and.push({ classEnrollments: { some: { classId: opts.classId, status: "ACTIVE" } } });
@@ -128,6 +145,7 @@ export async function listStudents(opts: StudentListOptions = {}): Promise<Stude
         reservedUntil: true,
         targetScore: true,
         status: true,
+        tuTrialUntil: true,
         classEnrollments: {
           where: { status: "ACTIVE" },
           orderBy: { joinedAt: "desc" },
@@ -202,6 +220,9 @@ export async function listStudents(opts: StudentListOptions = {}): Promise<Stude
       targetScore: u.targetScore,
       target,
       locked: u.status === "INACTIVE",
+      tuTrialUntil: u.tuTrialUntil?.toISOString() ?? null,
+      tuTrialActive: isTuTrialActive(u.tuTrialUntil, now),
+      tuTrialLabel: u.tuTrialUntil ? formatVnDayMonth(u.tuTrialUntil) : null,
       activeClass,
       activeClasses,
       entryTest: attempt
@@ -302,6 +323,7 @@ const AUDIT_ACTION_TEXT: Record<string, string> = {
   remove_enrollment: "Rời lớp",
   leave_class: "Rời lớp (chuyển lớp)",
   set_target_score: "Đổi điểm mục tiêu",
+  set_tu_trial: "Đổi dùng thử Luyện đề Tủ",
   update_roles: "Đổi vai trò",
   toggle_status: "Đổi trạng thái tài khoản",
   grade_attempt: "Chấm bài",
@@ -310,6 +332,7 @@ const AUDIT_ACTION_TEXT: Record<string, string> = {
 function auditGroupLabel(entityType: string, action: string): string {
   if (CLASS_ENTITY_TYPES.includes(entityType)) return "Lớp học";
   if (action === "set_target_score") return "Mục tiêu";
+  if (action === "set_tu_trial") return "Dùng thử Tủ";
   if (entityType === "Assignment" || entityType === "AssignmentRecipient") return "Bài tập";
   if (entityType === "PracticeAttempt" || entityType === "AttemptGrade" || action === "grade_attempt") return "Chấm bài";
   if (entityType === "EntryTestAttempt") return "Test đầu vào";

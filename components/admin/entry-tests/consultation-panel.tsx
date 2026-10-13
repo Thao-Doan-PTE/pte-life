@@ -1,4 +1,5 @@
 import { EmptyState, MutedText, Panel, Pill } from "@/components/admin/admin-ui";
+import { CONSULTATION_TOPIC_META as TOPIC_LABEL } from "@/components/admin/entry-tests/entry-test-labels";
 import { formatVnDate, formatVnDateTime } from "@/lib/admin/student-status";
 
 export interface ConsultationRow {
@@ -12,11 +13,6 @@ export interface ConsultationRow {
   note: string | null;
   createdAt: Date;
 }
-
-const TOPIC_LABEL: Record<string, { label: string; tone: "plum" | "ok" }> = {
-  consult: { label: "Tư vấn lộ trình", tone: "plum" },
-  trial: { label: "Học thử miễn phí", tone: "ok" },
-};
 
 /** Yêu cầu tư vấn / học thử mới (ConsultationRequest status NEW) — chỉ đọc, chỉ
  * hiện cho Admin và Vận hành/CSKH. Chưa có thao tác đổi trạng thái (chưa có

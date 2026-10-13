@@ -23,10 +23,11 @@ export default async function PracticeQuestionTypePage({
 }) {
   // Chặn ở từng trang (không chỉ ở layout): khi chuyển trang phía trình duyệt,
   // Next.js có thể bỏ qua layout đã có sẵn.
-  await requireClassStudent();
   const { skill, typeId } = await params;
   const { bank: bankParam } = await searchParams;
   const bank = bankParam === "TU" ? "TU" : undefined;
+  // Người dùng thử Tủ chỉ vào được danh sách bộ đề Tủ (WFD/RS, ?bank=TU).
+  await requireClassStudent({ allowTuTrial: bank === "TU" && (typeId === "write-from-dictation" || typeId === "repeat-sentence") });
 
   if (!VALID_SKILLS.includes(skill as Skill)) {
     notFound();

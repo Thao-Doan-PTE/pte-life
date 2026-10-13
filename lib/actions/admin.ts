@@ -8,6 +8,8 @@ import { writeAuditLog } from "@/lib/admin/audit";
 import { requireCapability } from "@/lib/admin/permissions";
 import { endOfVnDay, formatVnDate, isReserved, PACKAGE_LABEL, RESERVATION_DAYS } from "@/lib/admin/student-status";
 import type { ExamPackage } from "@/lib/question-types";
+import { isTuTrialActive } from "@/lib/student-access";
+import { TU_TRIAL_BULK_MAX, TU_TRIAL_DAY_CHOICES } from "@/components/admin/students/student-format";
 
 // Mọi hàm export trong file "use server" là endpoint HTTP công khai → mỗi hàm
 // PHẢI tự gọi requireCapability trước (3 thao tác gói học + điểm mục tiêu:
@@ -428,5 +430,227 @@ export async function setTargetScoreAction(formData: FormData): Promise<PlanActi
   return {
     ok: true,
     message: targetScore === null ? "Đã xoá điểm mục tiêu riêng." : `Đã lưu điểm mục tiêu ${targetScore}.`,
+  };
+}
+
+/* ---------------------------------------------------------------------------
+ * Danh sách mời dùng thử Luyện đề Tủ (User.tuTrialUntil — quyền "tu-trial" ở
+ * lib/student-access.ts): tài khoản học viên, kể cả chưa xếp lớp, được vào bộ đề
+ * Tủ (WFD, RS) và thi thử Đề Tủ tới hết ngày đã đặt. Hạn mới luôn tính từ hôm
+ * nay: hết ngày (giờ VN) của hôm nay + N ngày; "clear" = tắt (null).
+ * Ghi kiểu so-sánh-rồi-ghi như phần gói học để before/after trong AuditLog luôn
+ * đúng khi 2 thao tác chạy cùng lúc.
+ * Danh sách số ngày + giới hạn hàng loạt dùng chung với UI (student-format.ts):
+ * file "use server" chỉ không được EXPORT giá trị không phải hàm async, import
+ * hằng số thì bình thường — nên chỉ có 1 nguồn, UI và server không lệch nhau.
+ * ------------------------------------------------------------------------- */
+
+/** Id tài khoản (cuid ~25 ký tự) — chặn chuỗi rác quá dài gửi thẳng vào truy vấn. */
+const MAX_USER_ID_LENGTH = 64;
+
+const INVALID_TU_TRIAL_DAYS_MESSAGE = `Chọn thời gian dùng thử ${TU_TRIAL_DAY_CHOICES.slice(0, -1).join(", ")} hoặc ${
+  TU_TRIAL_DAY_CHOICES[TU_TRIAL_DAY_CHOICES.length - 1]
+} ngày.`;
+
+/** Kết quả thao tác dùng thử Tủ; neutral = không có gì thay đổi (không tô xanh/đỏ). */
+export interface TuTrialActionResult extends PlanActionResult {
+  neutral?: boolean;
+}
+
+/** "clear" → null (tắt); số ngày trong TU_TRIAL_DAY_CHOICES → số; còn lại → undefined. */
+function parseTuTrialDays(raw: string): number | null | undefined {
+  if (raw === "clear") return null;
+  if (!/^\d{1,2}$/.test(raw)) return undefined;
+  const days = Number(raw);
+  return (TU_TRIAL_DAY_CHOICES as readonly number[]).includes(days) ? days : undefined;
+}
+
+function sameInstant(a: Date | null, b: Date | null): boolean {
+  return a === null || b === null ? a === b : a.getTime() === b.getTime();
+}
+
+function tuTrialDetail(before: Date | null, after: Date | null, days: number | null, now: Date, bulk: boolean): string {
+  const suffix = bulk ? " — thao tác hàng loạt" : "";
+  if (after === null || days === null) {
+    const prev = before
+      ? ` (trước: đến ${formatVnDate(before)}${isTuTrialActive(before, now) ? "" : ", đã hết hạn"})`
+      : "";
+    return `Tắt dùng thử Luyện đề Tủ${prev}${suffix}`;
+  }
+  const until = formatVnDate(after);
+  return before && isTuTrialActive(before, now)
+    ? `Gia hạn dùng thử Luyện đề Tủ ${days} ngày tính từ hôm nay (đến ${until}; trước: đến ${formatVnDate(before)})${suffix}`
+    : `Mời dùng thử Luyện đề Tủ ${days} ngày (đến ${until})${suffix}`;
+}
+
+/** "longer" = (chỉ thao tác hàng loạt) học viên đang có hạn dùng thử dài hơn hạn
+ * mới → giữ nguyên, không rút ngắn. */
+type TuTrialWrite = "saved" | "unchanged" | "longer" | "not_found" | "conflict";
+
+/** Đặt tuTrialUntil = next cho 1 học viên trong transaction `tx`. `known` = giá
+ * trị vừa đọc (undefined = tự đọc). Chỉ ghi khi giá trị trong DB vẫn đúng như lúc
+ * đọc; bị chen ngang thì đọc lại và thử lại. Có thay đổi mới ghi AuditLog.
+ * `bulk` = thao tác hàng loạt: KHÔNG rút ngắn hạn dùng thử còn hiệu lực dài hơn
+ * hạn mới (rút ngắn chỉ làm có chủ đích trong drawer, nơi có cảnh báo). */
+async function writeTuTrial(
+  tx: Prisma.TransactionClient,
+  actor: Actor,
+  userId: string,
+  known: Date | null | undefined,
+  next: Date | null,
+  days: number | null,
+  now: Date,
+  bulk: boolean
+): Promise<TuTrialWrite> {
+  let before = known;
+  for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
+    if (before === undefined) {
+      const fresh = await tx.user.findFirst({
+        where: { id: userId, roles: { has: "STUDENT" } },
+        select: { tuTrialUntil: true },
+      });
+      if (!fresh) return "not_found";
+      before = fresh.tuTrialUntil;
+    }
+    if (sameInstant(before, next)) return "unchanged";
+    if (bulk && next !== null && before !== null && isTuTrialActive(before, now) && before.getTime() > next.getTime()) {
+      return "longer";
+    }
+
+    const { count } = await tx.user.updateMany({
+      where: { id: userId, roles: { has: "STUDENT" }, tuTrialUntil: before },
+      data: { tuTrialUntil: next },
+    });
+    if (count === 1) {
+      await writeAuditLog(
+        {
+          actor,
+          action: "set_tu_trial",
+          entityType: "User",
+          entityId: userId,
+          targetUserId: userId,
+          detail: tuTrialDetail(before, next, days, now, bulk),
+          before: { tuTrialUntil: before ? before.toISOString() : null },
+          after: { tuTrialUntil: next ? next.toISOString() : null },
+        },
+        tx
+      );
+      return "saved";
+    }
+    before = undefined; // vừa bị đổi ở nơi khác (hoặc mất role STUDENT) → đọc lại
+  }
+  return "conflict";
+}
+
+function revalidateTuTrialPages() {
+  revalidatePath("/admin/students");
+  revalidatePath("/admin/logs");
+}
+
+/** Mời / gia hạn / tắt dùng thử Luyện đề Tủ cho 1 học viên (drawer hồ sơ).
+ * FormData: userId, days ∈ TU_TRIAL_DAY_CHOICES hoặc "clear". Hạn mới có thể
+ * sớm hơn hạn hiện tại (drawer đã cảnh báo trước khi bấm). */
+export async function setTuTrialAction(formData: FormData): Promise<TuTrialActionResult> {
+  const admin = await requireCapability("managePlans");
+  const userId = fieldOf(formData, "userId");
+  const days = parseTuTrialDays(fieldOf(formData, "days"));
+  if (days === undefined) return { ok: false, message: INVALID_TU_TRIAL_DAYS_MESSAGE };
+  if (!userId || userId.length > MAX_USER_ID_LENGTH) return STUDENT_NOT_FOUND;
+
+  const now = new Date();
+  const next = days === null ? null : endOfVnDay(days, now);
+  const outcome = await prisma.$transaction((tx) =>
+    writeTuTrial(tx, admin, userId, undefined, next, days, now, false)
+  );
+
+  if (outcome === "not_found") return STUDENT_NOT_FOUND;
+  if (outcome === "conflict") return { ok: false, message: CONFLICT_MESSAGE };
+  if (outcome === "unchanged") {
+    return {
+      ok: true,
+      neutral: true,
+      message: next === null ? "Học viên chưa được mời dùng thử." : "Hạn dùng thử không thay đổi.",
+    };
+  }
+
+  revalidateTuTrialPages();
+  return {
+    ok: true,
+    message:
+      next === null
+        ? "Đã tắt dùng thử Luyện đề Tủ."
+        : `Đã mở dùng thử Luyện đề Tủ đến hết ngày ${formatVnDate(next)}.`,
+  };
+}
+
+/** Mời / tắt dùng thử Luyện đề Tủ cho nhiều học viên (bảng học viên).
+ * FormData: userIds (lặp lại, tối đa TU_TRIAL_BULK_MAX), days ∈ TU_TRIAL_DAY_CHOICES
+ * hoặc "clear". Mỗi học viên thay đổi ghi 1 dòng AuditLog; tài khoản không phải
+ * học viên bị bỏ qua; học viên đang có hạn dài hơn hạn mới được giữ nguyên. */
+export async function bulkSetTuTrialAction(formData: FormData): Promise<TuTrialActionResult> {
+  const admin = await requireCapability("managePlans");
+  const days = parseTuTrialDays(fieldOf(formData, "days"));
+  if (days === undefined) return { ok: false, message: INVALID_TU_TRIAL_DAYS_MESSAGE };
+
+  const raw = formData.getAll("userIds");
+  if (raw.length === 0) return { ok: false, message: "Chọn ít nhất 1 học viên." };
+  if (raw.length > TU_TRIAL_BULK_MAX) {
+    return { ok: false, message: `Mỗi lần chỉ chọn tối đa ${TU_TRIAL_BULK_MAX} học viên.` };
+  }
+  const ids = [...new Set(raw.map((v) => (typeof v === "string" ? v.trim() : "")))];
+  if (ids.some((id) => !id || id.length > MAX_USER_ID_LENGTH)) {
+    return { ok: false, message: "Danh sách học viên không hợp lệ." };
+  }
+
+  const now = new Date();
+  const next = days === null ? null : endOfVnDay(days, now);
+  const tally = await prisma.$transaction(
+    async (tx) => {
+      const students = await tx.user.findMany({
+        where: { id: { in: ids }, roles: { has: "STUDENT" } },
+        select: { id: true, tuTrialUntil: true },
+      });
+      const counts: Record<TuTrialWrite, number> = {
+        saved: 0,
+        unchanged: 0,
+        longer: 0,
+        not_found: ids.length - students.length,
+        conflict: 0,
+      };
+      for (const s of students) {
+        counts[await writeTuTrial(tx, admin, s.id, s.tuTrialUntil, next, days, now, true)]++;
+      }
+      return counts;
+    },
+    // Tối đa 200 học viên × (cập nhật + nhật ký) chạy tuần tự trong 1 transaction.
+    { maxWait: 10_000, timeout: 60_000 }
+  );
+
+  if (tally.saved > 0) revalidateTuTrialPages();
+
+  const head =
+    next === null
+      ? tally.saved > 0
+        ? `Đã tắt dùng thử Luyện đề Tủ cho ${tally.saved} học viên.`
+        : "Không có học viên nào cần tắt dùng thử."
+      : tally.saved > 0
+        ? `Đã mời ${tally.saved} học viên dùng thử Luyện đề Tủ đến hết ngày ${formatVnDate(next)}.`
+        : "Không có học viên nào thay đổi hạn dùng thử.";
+  const notes: string[] = [];
+  if (tally.unchanged > 0) {
+    notes.push(
+      next === null
+        ? `${tally.unchanged} học viên chưa được mời`
+        : `${tally.unchanged} học viên đã có đúng hạn này`
+    );
+  }
+  if (tally.longer > 0) notes.push(`${tally.longer} học viên đang có hạn dài hơn, giữ nguyên`);
+  if (tally.not_found > 0) notes.push(`${tally.not_found} tài khoản không phải học viên, đã bỏ qua`);
+  if (tally.conflict > 0) notes.push(`${tally.conflict} học viên vừa được cập nhật ở nơi khác, vui lòng thử lại`);
+
+  return {
+    ok: tally.conflict === 0,
+    neutral: tally.saved === 0 && tally.conflict === 0,
+    message: notes.length > 0 ? `${head} (${notes.join("; ")}.)` : head,
   };
 }

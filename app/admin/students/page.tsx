@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminContent, AdminPageHeader, MutedText, SegLinks } from "@/components/admin/admin-ui";
 import { StudentSearch } from "@/components/admin/students/student-search";
+import { TU_TRIAL_SCOPE_NOTE } from "@/components/admin/students/student-format";
 import { StudentTable } from "@/components/admin/students/student-table";
 import { can, getScopedClassIds, requireAdminPage } from "@/lib/admin/permissions";
 import { EXPIRING_SOON_DAYS, type StudentStatusKey } from "@/lib/admin/student-status";
@@ -29,8 +30,10 @@ const PKG_OPTIONS: { key: "all" | ExamPackage; label: string }[] = [
  * theo nhãn trạng thái. "active" / "reserved" lọc theo nhãn trên từng dòng.
  * Mọi bộ lọc trên chỉ gồm người từng được xếp lớp (quyết định 9A); người chưa
  * từng xếp lớp (tự đăng ký / tạo từ Test đầu vào) nằm riêng ở "leads" —
- * "Khách tiềm năng" — để vẫn mở được drawer đổi gói / gia hạn / xếp lớp. */
-type StatusFilter = "all" | StudentStatusKey | "attention" | "leads";
+ * "Khách tiềm năng" — để vẫn mở được drawer đổi gói / gia hạn / xếp lớp.
+ * "tu-trial" = danh sách mời dùng thử Luyện đề Tủ còn hạn; người dùng thử thường
+ * chưa từng xếp lớp nên bộ lọc này KHÔNG áp điều kiện "từng được xếp lớp". */
+type StatusFilter = "all" | StudentStatusKey | "attention" | "leads" | "tu-trial";
 
 /** Các bộ lọc dùng chung điều kiện "Cần xử lý" của Tổng quan. */
 const EXPIRING_FILTERS: ReadonlySet<StatusFilter> = new Set<StatusFilter>(["attention", "soon", "expired"]);
@@ -44,6 +47,17 @@ const EXPIRING_NOTE: Partial<Record<StatusFilter, string>> = {
 const LEADS_NOTE =
   "Khách tiềm năng: tài khoản học viên chưa từng được xếp lớp (tự đăng ký hoặc tạo từ Test đầu vào) — không tính vào danh sách học viên và số liệu ở Tổng quan. Mở hồ sơ để xếp lớp hoặc chỉnh gói học.";
 
+const TU_TRIAL_NOTE = `Dùng thử Tủ: tài khoản trong danh sách mời dùng thử Luyện đề Tủ còn hạn, gồm cả tài khoản chưa xếp lớp. ${TU_TRIAL_SCOPE_NOTE}`;
+
+/** Bộ lọc "Dùng thử Tủ" rỗng (chưa thêm tìm kiếm / gói / lớp): chỉ cách mời cho
+ * người có quyền managePlans. */
+const TU_TRIAL_EMPTY_INVITE =
+  "Chưa có tài khoản nào đang dùng thử Luyện đề Tủ. Chọn học viên ở «Khách tiềm năng» rồi bấm «Mời dùng thử Tủ», hoặc mời trong hồ sơ học viên.";
+const TU_TRIAL_EMPTY = "Chưa có tài khoản nào đang dùng thử Luyện đề Tủ.";
+
+/** Bộ lọc không lọc theo nhãn trạng thái trên từng dòng (đã lọc trong truy vấn hoặc không lọc). */
+const QUERY_ONLY_FILTERS: ReadonlySet<StatusFilter> = new Set<StatusFilter>(["all", "attention", "leads", "tu-trial"]);
+
 const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
   { key: "all", label: "Mọi trạng thái" },
   { key: "active", label: "Đang học" },
@@ -52,6 +66,7 @@ const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
   { key: "reserved", label: "Bảo lưu" },
   { key: "attention", label: "Cần xử lý" },
   { key: "leads", label: "Khách tiềm năng" },
+  { key: "tu-trial", label: "Dùng thử Tủ" },
 ];
 
 function one(v: string | string[] | undefined): string {
@@ -103,7 +118,8 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
       classId: filters.classId || undefined,
       scopedClassIds,
       attention: EXPIRING_FILTERS.has(filters.status),
-      placement: filters.status === "leads" ? "never" : "placed",
+      placement: filters.status === "leads" ? "never" : filters.status === "tu-trial" ? undefined : "placed",
+      tuTrial: filters.status === "tu-trial",
     }),
     filters.classId ? getClassBrief(filters.classId, scopedClassIds) : Promise.resolve(null),
     selectedId ? getStudentDetail(selectedId, scopedClassIds) : Promise.resolve(null),
@@ -111,20 +127,23 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
 
   const rows = filterStudentRows(allRows, {
     q: filters.q,
-    status:
-      filters.status === "all" || filters.status === "attention" || filters.status === "leads"
-        ? undefined
-        : filters.status,
+    status: QUERY_ONLY_FILTERS.has(filters.status) ? undefined : (filters.status as StudentStatusKey),
   });
 
   const placeableClasses: PlaceableClass[] =
     canPlace && detail ? await getPlaceableClasses(detail.row.examPackage) : [];
 
   const baseHref = hrefFor(filters);
+  const emptyText =
+    filters.status === "tu-trial" && !filters.q && filters.pkg === "all" && !filters.classId
+      ? canManagePlans
+        ? TU_TRIAL_EMPTY_INVITE
+        : TU_TRIAL_EMPTY
+      : undefined;
 
   return (
     <>
-      <AdminPageHeader title="Học viên & gói học" sub="Đổi gói, gia hạn, bảo lưu, xếp lớp" />
+      <AdminPageHeader title="Học viên & gói học" sub="Đổi gói, gia hạn, bảo lưu, xếp lớp, mời dùng thử Tủ" />
       <AdminContent>
         <section className="adm-panel min-w-0" aria-label="Danh sách học viên">
           <div className="adm-panel-head">
@@ -170,6 +189,15 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
             </p>
           )}
 
+          {filters.status === "tu-trial" && (
+            <p
+              className="border-b px-4 py-2.5 text-[12.5px]"
+              style={{ borderColor: "var(--adm-line)", background: "var(--adm-surface)", color: "var(--adm-ink-2)" }}
+            >
+              {TU_TRIAL_NOTE}
+            </p>
+          )}
+
           {filters.classId && (
             <div
               className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5 text-[13px]"
@@ -198,6 +226,7 @@ export default async function AdminStudentsPage({ searchParams }: { searchParams
             placeableClasses={placeableClasses}
             canManagePlans={canManagePlans}
             canPlace={canPlace}
+            emptyText={emptyText}
           />
         </section>
       </AdminContent>

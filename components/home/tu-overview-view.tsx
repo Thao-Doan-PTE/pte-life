@@ -5,6 +5,7 @@ import { TuQuickReport } from "@/components/home/tu-quick-report";
 import { createTuMockTestSession } from "@/lib/actions/mocktest";
 import { formatRelativeOrDate, scoreColorClass } from "@/lib/format";
 import { SKILL_ACCENT_COLOR } from "@/lib/question-types";
+import { formatVnDate } from "@/lib/admin/student-status";
 import type { TuOverview, TuQuickReportStats } from "@/lib/tu-queries";
 
 const TYPE_ICON: Record<string, typeof Headphones> = {
@@ -17,12 +18,18 @@ const TYPE_HREF: Record<string, string> = {
   "repeat-sentence": "/practice/speaking/repeat-sentence?bank=TU",
 };
 
+/* Trang /de-tu mở cho cả tài khoản dùng thử Tủ (chưa có lớp): mọi liên kết ở đây
+ * chỉ trỏ vào bộ đề Tủ (?bank=TU) hoặc thi thử Đề Tủ — KHÔNG thêm liên kết sang
+ * khu vực cần lớp học (/mocktest, /luyen-de-pte, danh sách luyện tập không có ?bank=TU). */
 export function TuOverviewView({
   overview,
   stats,
+  trialUntil = null,
 }: {
   overview: TuOverview;
   stats: TuQuickReportStats;
+  /** Hạn dùng thử khi tài khoản đang vào bằng danh sách mời (chưa có lớp); null = học viên có lớp. */
+  trialUntil?: Date | string | null;
 }) {
   const { progress, recent, totalQuestions } = overview;
 
@@ -38,6 +45,14 @@ export function TuOverviewView({
         <p className="m-0 text-[15px]" style={{ color: "var(--rail-ink-dim)" }}>
           Bộ câu hỏi Write From Dictation &amp; Repeat Sentence do giáo viên PTELife tổng hợp hàng tuần, update liên tục!
         </p>
+        {trialUntil != null && (
+          <p
+            className="mt-3 mb-0 inline-flex flex-wrap items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-semibold"
+            style={{ background: "var(--rail-red-tint)", color: "var(--rail-red-text)" }}
+          >
+            Bạn đang dùng thử Luyện đề Tủ đến {formatVnDate(trialUntil)}
+          </p>
+        )}
       </div>
 
       {totalQuestions === 0 ? (

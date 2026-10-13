@@ -15,6 +15,9 @@ import { getTypeProgressForPackage } from "@/lib/skill-progress-queries";
 import { getStreakDays } from "@/lib/wfd-queries";
 import { getTuOverview } from "@/lib/tu-queries";
 import { getStudentAssignments, toAssignmentSummary } from "@/lib/student-assignment-queries";
+import { prisma } from "@/lib/prisma";
+import { isTuTrialActive } from "@/lib/student-access";
+import { formatVnDate } from "@/lib/admin/student-status";
 
 export default async function Home() {
   const session = await auth();
@@ -56,18 +59,29 @@ export default async function Home() {
 
   const [earlyClassInfo, earlyAvatarUrl] = await Promise.all([getActiveClassInfo(user.id), getUserAvatarUrl(user.id)]);
   if (!earlyClassInfo) {
-    const latestTest = await getLatestEntryTestAttempt(user.id);
+    const [latestTest, trialRow] = await Promise.all([
+      getLatestEntryTestAttempt(user.id),
+      // Danh sách mời dùng thử Luyện đề Tủ (chỉ tra cho tài khoản chưa có lớp).
+      prisma.user.findUnique({ where: { id: user.id }, select: { tuTrialUntil: true } }),
+    ]);
     const testStatus = !latestTest ? "none" : latestTest.status === "IN_PROGRESS" ? "in_progress" : "submitted";
+    const tuTrialUntil = trialRow?.tuTrialUntil && isTuTrialActive(trialRow.tuTrialUntil) ? trialRow.tuTrialUntil : null;
     return (
       <RailShell
         role="student"
         headline={<>Chào <strong className="font-semibold">{user.name ?? user.email ?? "bạn"}</strong></>}
         user={{ name: user.name ?? user.email ?? "Học viên", avatarUrl: earlyAvatarUrl }}
         hasActiveClass={false}
+        hasTuAccess={tuTrialUntil !== null}
         fullBleed
       >
         <div className="hover-lift-group px-6 py-10 sm:px-8 sm:py-12">
-          <NewAccountOverview name={user.name ?? user.email ?? "bạn"} email={user.email ?? ""} testStatus={testStatus} />
+          <NewAccountOverview
+            name={user.name ?? user.email ?? "bạn"}
+            email={user.email ?? ""}
+            testStatus={testStatus}
+            tuTrialUntilLabel={tuTrialUntil ? formatVnDate(tuTrialUntil) : null}
+          />
         </div>
       </RailShell>
     );

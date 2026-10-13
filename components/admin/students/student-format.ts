@@ -16,6 +16,17 @@ export function targetSourceLabel(row: StudentRow): string {
   return row.target.source === "student" ? "Mục tiêu riêng" : `Mục tiêu lớp ${row.target.classCode ?? ""}`.trim();
 }
 
+/** Số ngày dùng thử Luyện đề Tủ được chọn — nguồn DUY NHẤT: lib/actions/admin.ts
+ * import chính hằng số này để kiểm tra lại và dựng câu báo lỗi (file này chỉ
+ * import type nên dùng được ở cả client lẫn server action). Sắp tăng dần. */
+export const TU_TRIAL_DAY_CHOICES = [7, 14, 30, 60, 90] as const;
+
+/** Tối đa số học viên mỗi lần mời / tắt dùng thử hàng loạt (server dùng chung). */
+export const TU_TRIAL_BULK_MAX = 200;
+
+/** Nội dung ghi chú phạm vi dùng thử (drawer + bộ lọc). */
+export const TU_TRIAL_SCOPE_NOTE = "Chỉ mở bộ đề Tủ (WFD, RS) và thi thử Đề Tủ; các phần khác vẫn cần xếp lớp.";
+
 /** Nhãn lớp kèm giáo viên chính, VD "AC-K12 · Nguyễn Lan". */
 export function classWithTeacher(row: StudentRow): string | null {
   const c = row.activeClass;
