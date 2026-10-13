@@ -6,6 +6,7 @@ import { NEW_HEADER_TYPE_IDS } from "@/lib/practice-config";
 import { FavoriteStarButton } from "@/components/practice/favorite-star-button";
 
 export function PracticeHeader({
+  listHref,
   skill,
   typeId,
   typeName,
@@ -19,6 +20,8 @@ export function PracticeHeader({
   streakDays,
   isFavorited,
 }: {
+  /** Link "Danh sách câu hỏi" — giữ ?bank=TU khi đang luyện bộ đề Tủ. */
+  listHref?: string;
   skill: Skill;
   typeId: string;
   typeName: string;
@@ -34,7 +37,7 @@ export function PracticeHeader({
 }) {
   const backLink = (
     <Link
-      href={`/practice/${skill}/${typeId}`}
+      href={listHref ?? `/practice/${skill}/${typeId}`}
       className="flex items-center gap-1 text-[15px] font-normal"
       style={{ color: "var(--wfd-muted)" }}
     >

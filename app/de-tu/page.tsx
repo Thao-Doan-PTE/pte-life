@@ -7,7 +7,8 @@ import { hasRole, hasAnyRole } from "@/lib/auth-helpers";
 import { getUserAvatarUrl } from "@/lib/dashboard-queries";
 import { getActiveClassInfo } from "@/lib/student-overview-queries";
 import { getTuOverview, getTuQuickReportStats } from "@/lib/tu-queries";
-import { hasTuTrialAccess } from "@/lib/student-access";
+import { isTuTrialActive } from "@/lib/student-access";
+import { prisma } from "@/lib/prisma";
 
 export default async function DeTuPage() {
   const session = await auth();
@@ -33,8 +34,9 @@ export default async function DeTuPage() {
     getTuQuickReportStats(user.id),
   ]);
 
-  // Học viên có lớp, hoặc tài khoản trong danh sách mời dùng thử Tủ.
-  const tuTrial = classInfo ? false : await hasTuTrialAccess(user.id);
+  // Học viên có lớp, hoặc tài khoản trong danh sách mời dùng thử Tủ (hiện ngày hết hạn dùng thử).
+  const trialRow = classInfo ? null : await prisma.user.findUnique({ where: { id: user.id }, select: { tuTrialUntil: true } });
+  const tuTrial = !classInfo && isTuTrialActive(trialRow?.tuTrialUntil);
   if (!classInfo && !tuTrial) redirect("/test-dau-vao");
 
   return (
@@ -45,7 +47,7 @@ export default async function DeTuPage() {
       hasActiveClass={classInfo !== null}
       hasTuAccess={classInfo !== null || tuTrial}
     >
-      <TuOverviewView overview={overview} stats={stats} />
+      <TuOverviewView overview={overview} stats={stats} trialUntil={tuTrial && trialRow?.tuTrialUntil ? trialRow.tuTrialUntil.toISOString() : null} />
     </RailShell>
   );
 }

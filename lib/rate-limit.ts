@@ -24,6 +24,10 @@ export const RATE_LIMITS = {
   aiGradeUserDay: { limit: 800, windowMs: DAY },
   // Tạo giọng đọc Azure (tính phí theo ký tự) — câu đã đọc rồi lấy từ cache, không tính.
   ttsUser: { limit: 300, windowMs: HOUR },
+  // Người dùng thử Tủ (chưa có lớp): thêm giới hạn theo ngày cho giọng đọc mới.
+  ttsTrialDay: { limit: 200, windowMs: DAY },
+  // Tra nghĩa từ (gọi 2 dịch vụ bên ngoài mỗi lần).
+  lookupUser: { limit: 300, windowMs: HOUR },
   // Đặt lịch tư vấn / học thử.
   consultationUser: { limit: 5, windowMs: DAY },
   // Upload file (ảnh đại diện, ghi âm Test đầu vào).

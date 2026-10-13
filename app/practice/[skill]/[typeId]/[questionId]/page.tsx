@@ -38,8 +38,11 @@ export default async function PracticePlayerPage({
   const bank = bankParam === "TU" ? "TU" : undefined;
   // Người dùng thử Tủ chỉ mở được câu bộ đề Tủ: ?bank=TU lọc câu theo bank ở
   // getQuestionWithSiblings nên câu PTE mở với ?bank=TU sẽ không tìm thấy.
-  await requireClassStudent({ allowTuTrial: bank === "TU" && (typeId === "write-from-dictation" || typeId === "repeat-sentence") });
+  const access = await requireClassStudent({ allowTuTrial: bank === "TU" && (typeId === "write-from-dictation" || typeId === "repeat-sentence") });
   const bankQuery = bank ? `?bank=${bank}` : "";
+  // Exam Simulation tạo lượt Mock test theo dạng bài (chỉ dành cho học viên có lớp) —
+  // ẩn với người dùng thử Tủ (họ thi thử qua "Thi thử Đề Tủ" ở trang Đề Tủ).
+  const showExamSimulation = access !== "tu-trial";
 
   if (!VALID_SKILLS.includes(skill as Skill)) {
     notFound();
@@ -129,6 +132,7 @@ export default async function PracticePlayerPage({
             questionNumber={index + 1}
             total={all.length}
             isFavorited={favorited}
+            showExamSimulation={showExamSimulation}
           />
         </WfdShell>
       </AppShell>
@@ -142,6 +146,7 @@ export default async function PracticePlayerPage({
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-5 py-8 sm:px-10 lg:grid-cols-[1fr_320px]">
           <div className="flex flex-col gap-6">
             <PracticeHeader
+              listHref={listHref}
               skill={skill as Skill}
               typeId={typeId}
               typeName={questionType.name}
@@ -209,7 +214,7 @@ export default async function PracticePlayerPage({
           </div>
 
           <div className="flex flex-col gap-4">
-            <ExamSimulationToggle questionTypeId={typeId} />
+            {showExamSimulation && <ExamSimulationToggle questionTypeId={typeId} />}
             <WfdTipsCard
               title={
                 typeId === "repeat-sentence"

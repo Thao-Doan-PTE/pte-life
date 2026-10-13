@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 export interface WordLookupResult {
   word: string;
@@ -31,6 +32,9 @@ export async function lookupWordAction(rawWord: string): Promise<WordLookupResul
     return { word: String(rawWord).slice(0, 40), phonetic: null, meaningVi: null };
   }
   const word = String(rawWord).toLowerCase().replace(/[^a-z'-]/g, "").slice(0, 40);
+  if (word && !(await consumeRateLimit("lookupUser", session.user.id))) {
+    return { word, phonetic: null, meaningVi: null };
+  }
   if (!word) {
     return { word: rawWord, phonetic: null, meaningVi: null };
   }

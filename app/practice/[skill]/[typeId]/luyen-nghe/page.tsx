@@ -40,7 +40,7 @@ export default async function WfdListenPracticePage({
     <AppShell>
       <WfdShell>
         <WfdListenPractice
-          backHref={`/practice/${skill}/${typeId}`}
+          backHref={`/practice/${skill}/${typeId}${access === "tu-trial" ? "?bank=TU" : ""}`}
           typeName={typeName}
           typeCode={typeCode}
           questions={questions.map((q) => {

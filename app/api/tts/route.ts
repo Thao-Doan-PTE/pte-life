@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPracticeAccess } from "@/lib/student-access";
-import { consumeRateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit, consumeRateLimits } from "@/lib/rate-limit";
 import {
   isAzureTtsConfigured,
   isKnownVoice,
@@ -18,9 +18,12 @@ const audioCache = new Map<string, ArrayBuffer>();
 
 export async function POST(request: NextRequest) {
   let userId: string;
+  let isTrial = false;
   try {
-    // Người dùng thử Tủ cần giọng đọc cho WFD Tủ — vẫn bị giới hạn ttsUser.
-    userId = (await requireAnyPracticeAccess()).user.id;
+    // Người dùng thử Tủ cần giọng đọc cho WFD Tủ — giới hạn ttsUser + thêm hạn mức theo ngày.
+    const { user, access } = await requireAnyPracticeAccess();
+    userId = user.id;
+    isTrial = access === "tu-trial";
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -52,7 +55,10 @@ export async function POST(request: NextRequest) {
   try {
     let audio = audioCache.get(cacheKey);
     if (!audio) {
-      if (!(await consumeRateLimit("ttsUser", userId))) {
+      const allowed = isTrial
+        ? await consumeRateLimits(["ttsUser", userId], ["ttsTrialDay", userId])
+        : await consumeRateLimit("ttsUser", userId);
+      if (!allowed) {
         return NextResponse.json({ error: "Bạn đã nghe quá nhiều câu mới trong 1 giờ, vui lòng thử lại sau." }, { status: 429 });
       }
       audio = await synthesizeSpeech(text, voiceName);

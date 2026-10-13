@@ -22,6 +22,7 @@ export function WfdResultScreen({
   nextHref,
   previousPteScore,
   onRetry,
+  showExamSimulation = true,
 }: {
   result: ScoreResult;
   submittedAnswer: string;
@@ -30,6 +31,7 @@ export function WfdResultScreen({
   nextHref: string | null;
   previousPteScore: number | null;
   onRetry: () => void;
+  showExamSimulation?: boolean;
 }) {
   const diff = result.reveal.diff as DictationWordDiff[];
   const refDiff = diff.filter((d) => d.status !== "extra");
@@ -389,7 +391,7 @@ export function WfdResultScreen({
       </div>
 
       <div className="flex flex-col gap-4">
-        <ExamSimulationToggle questionTypeId="write-from-dictation" />
+        {showExamSimulation && <ExamSimulationToggle questionTypeId="write-from-dictation" />}
       </div>
     </div>
   );

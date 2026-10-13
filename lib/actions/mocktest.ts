@@ -342,8 +342,8 @@ export async function submitMockAnswerAndAdvance(
 }
 
 export async function deleteMockTestSession(sessionId: string) {
-  const { user } = await requireAnyPracticeAccess();
+  const { user, access } = await requireAnyPracticeAccess();
   await prisma.mockTestSession.deleteMany({
-    where: { id: sessionId, userId: user.id },
+    where: { id: sessionId, userId: user.id, ...(access === "tu-trial" ? { mode: "tu" } : {}) },
   });
 }

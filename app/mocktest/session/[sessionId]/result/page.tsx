@@ -96,7 +96,7 @@ export default async function MockTestResultPage({
           {results.map((r, i) => (
             <Link
               key={r.questionId}
-              href={`/practice/${QUESTION_TYPES.find((t) => t.id === r.questionTypeId)?.skill ?? mockSession.skill ?? ""}/${r.questionTypeId}/${r.questionId}`}
+              href={`/practice/${QUESTION_TYPES.find((t) => t.id === r.questionTypeId)?.skill ?? mockSession.skill ?? ""}/${r.questionTypeId}/${r.questionId}${mockSession.mode === "tu" ? "?bank=TU" : ""}`}
               className="flex items-center justify-between gap-3 px-4 py-3 text-[15px] transition-colors hover:bg-muted"
             >
               <div className="flex items-center gap-3">
@@ -121,9 +121,9 @@ export default async function MockTestResultPage({
         <Button
           className="self-center bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent/90"
           nativeButton={false}
-          render={<Link href="/mocktest" />}
+          render={<Link href={mockSession.mode === "tu" ? "/de-tu" : "/mocktest"} />}
         >
-          Về trang Mocktest
+          {mockSession.mode === "tu" ? "Về Luyện đề Tủ" : "Về trang Mocktest"}
         </Button>
       </div>
     </AppShell>

@@ -9,6 +9,9 @@ export async function toggleFavoriteAction(questionId: string): Promise<boolean>
   if (!session?.user?.id) {
     throw new Error("Bạn cần đăng nhập để dùng tính năng này.");
   }
+  if (typeof questionId !== "string" || questionId.length === 0 || questionId.length > 64) {
+    throw new Error("Câu hỏi không hợp lệ.");
+  }
   const userId = session.user.id;
 
   const existing = await prisma.favorite.findUnique({

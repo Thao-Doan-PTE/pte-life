@@ -24,6 +24,7 @@ export function WfdPlayScreen({
   questionNumber,
   total,
   isFavorited,
+  showExamSimulation = true,
 }: {
   questionId: string;
   questionCode: string;
@@ -34,6 +35,8 @@ export function WfdPlayScreen({
   questionNumber: number;
   total: number;
   isFavorited: boolean;
+  /** Ẩn công tắc Exam Simulation (người dùng thử Tủ). */
+  showExamSimulation?: boolean;
 }) {
   const [hasPlayed, setHasPlayed] = useState(false);
   const [answer, setAnswer] = useState("");
@@ -77,6 +80,7 @@ export function WfdPlayScreen({
         referenceSentence={sentence}
         listHref={listHref}
         nextHref={nextHref}
+        showExamSimulation={showExamSimulation}
         previousPteScore={previousPteScore}
         onRetry={() => {
           setResult(null);
@@ -240,7 +244,7 @@ export function WfdPlayScreen({
       </div>
 
       <div className="flex flex-col gap-4">
-        <ExamSimulationToggle questionTypeId="write-from-dictation" />
+        {showExamSimulation && <ExamSimulationToggle questionTypeId="write-from-dictation" />}
         <WfdTipsCard
           title="MẸO LÀM BÀI WFD"
           tips={[

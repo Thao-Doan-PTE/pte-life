@@ -7,6 +7,7 @@ import { submitMockAnswerAndAdvance } from "@/lib/actions/mocktest";
 import { PRACTICE_INSTRUCTIONS } from "@/lib/practice-config";
 import { QUESTION_TYPES } from "@/lib/question-types";
 import { requireClassStudent } from "@/lib/require-class-student";
+import { isTuTrialQuestion } from "@/lib/student-access";
 import { shouldCollectAssignmentAudio } from "@/lib/admin/assignment-link";
 
 export default async function MockTestSessionPage({
@@ -34,6 +35,8 @@ export default async function MockTestSessionPage({
   const questionId = mockSession.questionIds[mockSession.currentIndex];
   const question = await prisma.question.findUnique({ where: { id: questionId } });
   if (!question) notFound();
+  // Câu có thể đã bị chuyển khỏi bộ Tủ sau khi tạo lượt thi — người dùng thử không được xem.
+  if (access === "tu-trial" && !isTuTrialQuestion(question)) redirect("/de-tu");
 
   const instructions = PRACTICE_INSTRUCTIONS[question.questionTypeId];
   const total = mockSession.questionIds.length;
