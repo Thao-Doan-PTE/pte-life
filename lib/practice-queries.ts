@@ -3,7 +3,8 @@ import type { QuestionBank } from "@/lib/generated/prisma/client";
 
 export function getQuestionsForType(questionTypeId: string, bank?: QuestionBank) {
   return prisma.question.findMany({
-    where: { questionTypeId, ...(bank ? { bank } : {}) },
+    // Câu đã ẩn (archivedAt) không hiện trong danh sách luyện tập.
+    where: { questionTypeId, archivedAt: null, ...(bank ? { bank } : {}) },
     orderBy: { code: "asc" },
   });
 }
@@ -15,7 +16,13 @@ export async function getQuestionWithSiblings(
 ) {
   const all = await getQuestionsForType(questionTypeId, bank);
   const index = all.findIndex((q) => q.id === questionId);
-  return { question: index >= 0 ? all[index] : null, all, index };
+  if (index >= 0) return { question: all[index], all, index };
+  // Câu đã ẩn vẫn mở được bằng link trực tiếp (vd từ bài tập được giao trước khi ẩn),
+  // nhưng không nằm trong danh sách/chuyển câu.
+  const archived = await prisma.question.findFirst({
+    where: { id: questionId, questionTypeId, archivedAt: { not: null }, ...(bank ? { bank } : {}) },
+  });
+  return { question: archived, all, index: -1 };
 }
 
 /** Trả về Set các questionId mà user đã từng nộp bài cho đúng 1 dạng câu hỏi. */

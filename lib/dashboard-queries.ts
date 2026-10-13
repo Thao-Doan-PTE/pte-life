@@ -59,7 +59,7 @@ export async function getRecentAttempts(userId: string, limit = 5): Promise<Rece
 export async function getQuestionCountsByType(typeIds: string[]): Promise<Record<string, number>> {
   const counts = await prisma.question.groupBy({
     by: ["questionTypeId"],
-    where: { questionTypeId: { in: typeIds } },
+    where: { questionTypeId: { in: typeIds }, archivedAt: null },
     _count: { questionTypeId: true },
   });
   const map: Record<string, number> = {};
@@ -70,9 +70,10 @@ export async function getQuestionCountsByType(typeIds: string[]): Promise<Record
 
 export async function getSkillProgress(userId: string): Promise<SkillProgress[]> {
   const [totalBySkill, practicedQuestions, attemptsByType, scoredAttempts] = await Promise.all([
-    prisma.question.groupBy({ by: ["skill"], _count: { skill: true } }),
+    prisma.question.groupBy({ by: ["skill"], where: { archivedAt: null }, _count: { skill: true } }),
     prisma.practiceAttempt.findMany({
-      where: { userId },
+      // Cùng bộ lọc archivedAt với tổng ở trên để tử số không vượt mẫu số.
+      where: { userId, question: { archivedAt: null } },
       select: { questionId: true, question: { select: { skill: true } } },
       distinct: ["questionId"],
     }),
@@ -125,8 +126,9 @@ export async function getSkillProgress(userId: string): Promise<SkillProgress[]>
 
   return SKILLS.map((skill) => {
     const totalQuestions = totalMap.get(skill) ?? 0;
-    const practicedCount = practicedMap.get(skill) ?? 0;
-    const progressPct = totalQuestions > 0 ? Math.round((practicedCount / totalQuestions) * 100) : 0;
+    const practicedCount = Math.min(practicedMap.get(skill) ?? 0, totalQuestions);
+    const progressPct =
+      totalQuestions > 0 ? Math.min(100, Math.round((practicedCount / totalQuestions) * 100)) : 0;
     const top = topTypeBySkill.get(skill);
     const fallbackType = getQuestionTypesBySkill(skill)[0] ?? null;
     const scoredAttemptCount = scoreCountBySkill.get(skill) ?? 0;

@@ -26,8 +26,8 @@ function buildEntries(role: Role, hasActiveClass: boolean): RailEntry[] {
   if (role === "teacher") {
     return [
       { view: "tclass", href: "/", title: "Tổng quan lớp", icon: <ICONS.tclass className={iconClass} strokeWidth={1.8} /> },
-      { view: "assign", href: "/giao-bai", title: "Giao bài mới", icon: <ICONS.assign className={iconClass} strokeWidth={1.8} /> },
-      { view: "grade", href: "/bai-cho-cham", title: "Bài chờ chấm", icon: <ICONS.grade className={iconClass} strokeWidth={1.8} /> },
+      { view: "assign", href: "/admin/assignments", title: "Giao bài mới", icon: <ICONS.assign className={iconClass} strokeWidth={1.8} /> },
+      { view: "grade", href: "/admin/grading", title: "Bài chờ chấm", icon: <ICONS.grade className={iconClass} strokeWidth={1.8} /> },
       { view: "tu", href: "/de-tu", title: "Luyện đề Tủ", icon: <ICONS.tu className={iconClass} strokeWidth={1.8} /> },
     ];
   }
@@ -48,7 +48,7 @@ function buildEntries(role: Role, hasActiveClass: boolean): RailEntry[] {
     { view: "lop-hoc", href: "/lop-hoc", title: "Lớp của tôi", icon: <ICONS.lop className={iconClass} strokeWidth={1.8} />, group: "Lớp học", locked: !hasActiveClass },
     {
       view: "bai-giao",
-      href: "/#bai-giao-vien-giao",
+      href: "/bai-tap",
       title: "Bài giáo viên giao",
       icon: <ICONS.assign className={iconClass} strokeWidth={1.8} />,
       group: "Lớp học",

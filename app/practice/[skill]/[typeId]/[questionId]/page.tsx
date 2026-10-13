@@ -20,6 +20,7 @@ import { WfdPlayScreen } from "@/components/wfd/wfd-play-screen";
 import { WfdTipsCard } from "@/components/wfd/wfd-sidebar-cards";
 import { getStreakDays } from "@/lib/wfd-queries";
 import { requireClassStudent } from "@/lib/require-class-student";
+import { shouldCollectAssignmentAudio } from "@/lib/admin/assignment-link";
 
 const VALID_SKILLS: Skill[] = ["speaking", "writing", "reading", "listening"];
 
@@ -76,6 +77,13 @@ export default async function PracticePlayerPage({
   const session = await auth();
   const streakDays = await getStreakDays(session!.user.id);
   const favorited = await isFavorited(session!.user.id, question.id);
+  // Speaking: chỉ gửi kèm file ghi âm khi câu này đang là bài nộp chờ giáo viên
+  // chấm (bài tập đang mở của lớp đang học, chưa nộp) — tự luyện không tải file
+  // lên vô ích. Server vẫn tự kiểm tra lại lúc nộp.
+  const collectAudio =
+    skill === "speaking"
+      ? await shouldCollectAssignmentAudio(session!.user.id, question.id, question.questionTypeId)
+      : false;
 
   const simpleNav = (
     <div className="flex items-center justify-between border-t pt-4" style={{ borderColor: "var(--wfd-border)" }}>
@@ -175,7 +183,7 @@ export default async function PracticePlayerPage({
                       </div>
                       <FavoriteStarButton questionId={question.id} initialFavorited={favorited} />
                     </div>
-                    {renderPracticePlayer(typeId, question.id, content, instructions)}
+                    {renderPracticePlayer(typeId, question.id, content, instructions, { collectAudio })}
                   </div>
                 );
 
@@ -192,7 +200,7 @@ export default async function PracticePlayerPage({
               })()
             ) : (
               <>
-                {renderPracticePlayer(typeId, question.id, content, instructions)}
+                {renderPracticePlayer(typeId, question.id, content, instructions, { collectAudio })}
                 {simpleNav}
               </>
             )}

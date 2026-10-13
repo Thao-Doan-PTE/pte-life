@@ -1,9 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useId } from "react";
 import { assignTeacherAction } from "@/lib/actions/classes";
-import { useState } from "react";
+import { SubmitButton } from "@/components/admin/classes/form-buttons";
 
 export function AssignTeacherForm({
   classId,
@@ -12,40 +11,42 @@ export function AssignTeacherForm({
   classId: string;
   teachers: { id: string; name: string; email: string }[];
 }) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const id = useId();
   if (teachers.length === 0) {
-    return <p className="text-sm text-muted-foreground">Chưa có tài khoản nào mang role Giáo viên.</p>;
+    return (
+      <p className="text-[13px]" style={{ color: "var(--adm-ink-3)" }}>
+        Không còn giáo viên nào để phân công (cần tài khoản đang hoạt động mang role Giáo viên).
+      </p>
+    );
   }
-  // Nếu giáo viên đang chọn vừa được gán (không còn trong danh sách khả dụng),
-  // quay về giáo viên đầu tiên thay vì giữ 1 id không còn tồn tại.
-  const teacherId = selected && teachers.some((t) => t.id === selected) ? selected : teachers[0].id;
 
+  // Select không điều khiển: sau khi gán xong React tự reset form, giáo viên vừa
+  // gán biến khỏi danh sách nên lựa chọn quay về giáo viên đầu tiên.
   return (
     <form action={assignTeacherAction} className="flex flex-wrap items-end gap-2">
       <input type="hidden" name="classId" value={classId} />
-      <input type="hidden" name="teacherId" value={teacherId} />
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">Giáo viên</label>
-        <Select
-          items={Object.fromEntries(teachers.map((t) => [t.id, `${t.name} (${t.email})`]))}
-          value={teacherId}
-          onValueChange={(v) => v && setSelected(v)}
-        >
-          <SelectTrigger className="w-64">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {teachers.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                {t.name} ({t.email})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex min-w-0 flex-[1_1_220px] flex-col gap-1">
+        <label htmlFor={`${id}-teacher`} className="text-[12.5px] font-semibold" style={{ color: "var(--adm-ink-2)" }}>
+          Giáo viên
+        </label>
+        <select id={`${id}-teacher`} name="teacherId" className="adm-input w-full" defaultValue={teachers[0].id}>
+          {teachers.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name} ({t.email})
+            </option>
+          ))}
+        </select>
       </div>
-      <Button type="submit" size="sm" variant="outline">
-        Gán giáo viên
-      </Button>
+      <div className="flex flex-[0_1_150px] flex-col gap-1">
+        <label htmlFor={`${id}-role`} className="text-[12.5px] font-semibold" style={{ color: "var(--adm-ink-2)" }}>
+          Vai trò
+        </label>
+        <select id={`${id}-role`} name="role" className="adm-input w-full" defaultValue="MAIN">
+          <option value="MAIN">Giáo viên chính</option>
+          <option value="ASSISTANT">Trợ giảng</option>
+        </select>
+      </div>
+      <SubmitButton pendingLabel="Đang gán…">Gán giáo viên</SubmitButton>
     </form>
   );
 }

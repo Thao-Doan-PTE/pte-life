@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ExamAudioBar } from "@/components/mocktest/exam-audio-bar";
 import { useRegisterBeforeAdvance } from "@/components/mocktest/exam-advance-context";
 import { submitWritingAttemptAction } from "@/lib/actions/writing";
+import { countWords } from "@/lib/scoring/writing-form";
 
 /** Dùng chung cho các dạng gõ chữ tự do sau khi đọc/nghe, đều chấm bằng AI
  * (không phải rule-based): Write Essay, Summarize Written Text, Summarize
@@ -15,23 +16,24 @@ export function ExamTextAnswerPlayer({
   instructionText,
   passageText,
   audioUrl,
+  mockSessionId,
 }: {
   questionId: string;
   instructionText: string;
   passageText?: string;
   audioUrl?: string;
+  /** Lượt Mock test đang làm — để bài viết gắn đúng bài tập của lượt thi (server kiểm tra lại). */
+  mockSessionId?: string;
 }) {
   const [hasPlayed, setHasPlayed] = useState(!audioUrl);
   const [answer, setAnswer] = useState("");
-  const wordCount = useMemo(
-    () => (answer.trim().length === 0 ? 0 : answer.trim().split(/\s+/).length),
-    [answer]
-  );
+  // Cùng bộ đếm với kiểm tra Form phía server để số từ hiển thị khớp với số từ được chấm.
+  const wordCount = useMemo(() => countWords(answer), [answer]);
 
   useRegisterBeforeAdvance(
     answer.trim().length > 0
       ? async () => {
-          await submitWritingAttemptAction(questionId, answer, 0);
+          await submitWritingAttemptAction(questionId, answer, 0, mockSessionId);
         }
       : null
   );

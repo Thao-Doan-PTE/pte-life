@@ -24,6 +24,10 @@ function resumeTitle(session: ResumeSessionInfo): { title: string; subtitle: str
   if (session.mode === "tu") {
     return { title: "Thi thử Đề Tủ", subtitle: "Write From Dictation · Repeat Sentence" };
   }
+  // Mock test làm theo bài tập được giao: nhiều dạng bài trong 1 lượt.
+  if (session.mode === "question" && !session.questionTypeId) {
+    return { title: "Mock test bài tập", subtitle: session.skill ? SKILL_LABELS_VI[session.skill as Skill] : "Nhiều dạng bài" };
+  }
   return { title: "Full Test", subtitle: "Trọn bộ 4 kỹ năng" };
 }
 

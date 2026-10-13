@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { QUESTION_IMPORT_SCHEMAS } from "@/lib/question-import/schemas";
 import { buildTemplateCsv } from "@/lib/question-import/template";
-import { isAdmin } from "@/lib/auth-helpers";
+import { can } from "@/lib/admin/permissions";
 
+/** File mẫu chỉ dùng để nhập câu hỏi → chỉ người có quyền sửa ngân hàng đề (Admin).
+ * /api nằm ngoài matcher của proxy nên route tự kiểm tra quyền và trả 403. */
 export async function GET(request: NextRequest) {
   const session = await auth();
-  if (!session?.user || !isAdmin(session.user)) {
+  if (!session?.user || !can(session.user, "editQuestionBank")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

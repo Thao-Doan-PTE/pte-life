@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScoreResultBanner } from "@/components/practice/review/score-result-banner";
 import { renderAttemptReview } from "@/components/history/attempt-review-switch";
+import { TeacherGradePanel, TeacherGradePending, parseGradeCriteria } from "@/components/history/teacher-grade-panel";
 import { getAttemptDetail } from "@/lib/history-queries";
+import { prisma } from "@/lib/prisma";
 import { RULE_BASED_TYPE_IDS } from "@/lib/scoring/rule-based";
 import { QUESTION_TYPES, SKILL_LABELS } from "@/lib/question-types";
 import { formatRelativeOrDate } from "@/lib/format";
@@ -26,6 +28,25 @@ export default async function HistoryDetailPage({
 
   const type = QUESTION_TYPES.find((t) => t.id === attempt.questionTypeId);
   const isRuleBased = RULE_BASED_TYPE_IDS.has(attempt.questionTypeId);
+
+  // Bài đã thuộc về học viên này (getAttemptDetail lọc theo userId) — giờ mới
+  // đọc điểm giáo viên (lưu riêng, không thay điểm AI) và tên bài tập.
+  const [teacherGrade, assignment] = await Promise.all([
+    prisma.attemptGrade.findUnique({
+      where: { attemptId: attempt.id },
+      select: {
+        total: true,
+        maxTotal: true,
+        comment: true,
+        gradedAt: true,
+        criteria: true,
+        gradedBy: { select: { name: true } },
+      },
+    }),
+    attempt.assignmentId
+      ? prisma.assignment.findUnique({ where: { id: attempt.assignmentId }, select: { title: true } })
+      : null,
+  ]);
 
   return (
     <AppShell>
@@ -49,6 +70,24 @@ export default async function HistoryDetailPage({
             Làm lúc {formatRelativeOrDate(attempt.createdAt.toISOString())}
           </p>
         </div>
+
+        {teacherGrade ? (
+          <TeacherGradePanel
+            assignmentTitle={assignment?.title ?? null}
+            grade={{
+              total: teacherGrade.total,
+              maxTotal: teacherGrade.maxTotal,
+              comment: teacherGrade.comment,
+              gradedAt: teacherGrade.gradedAt,
+              graderName: teacherGrade.gradedBy.name,
+              criteria: parseGradeCriteria(teacherGrade.criteria),
+            }}
+          />
+        ) : attempt.reviewStatus === "PENDING" && attempt.assignmentId && assignment ? (
+          // Bài tập/lớp đã bị xoá (assignmentId về null) thì hàng chờ chấm không
+          // còn thấy bài này — không hiện "đang chờ" mãi.
+          <TeacherGradePending assignmentTitle={assignment?.title ?? null} />
+        ) : null}
 
         {renderAttemptReview(
           attempt.questionTypeId,

@@ -18,12 +18,20 @@ import type { ParagraphItem } from "@/components/practice/reorder-paragraphs";
 import { toOpaqueParagraphId } from "@/lib/opaque-id";
 import { stripBlankAnswers } from "@/lib/practice-content-utils";
 
+export interface PracticePlayerOptions {
+  /** Speaking: gửi kèm file ghi âm khi nộp (câu đang là bài nộp chờ giáo viên
+   * chấm — trang tính ở server). Mặc định không gửi. */
+  collectAudio?: boolean;
+}
+
 export function renderPracticePlayer(
   typeId: string,
   questionId: string,
   content: Record<string, unknown>,
-  instructions: PracticeInstructions
+  instructions: PracticeInstructions,
+  options: PracticePlayerOptions = {}
 ) {
+  const { collectAudio = false } = options;
   switch (typeId) {
     // Speaking
     case "read-aloud":
@@ -34,6 +42,7 @@ export function renderPracticePlayer(
             passage={content.passage}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
           />
         );
       break;
@@ -46,6 +55,7 @@ export function renderPracticePlayer(
             ttsText={typeof content.referenceText === "string" ? content.referenceText : undefined}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
           />
         );
       break;
@@ -59,6 +69,7 @@ export function renderPracticePlayer(
             audioUrl={content.audioUrl}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
           />
         );
       break;
@@ -70,6 +81,7 @@ export function renderPracticePlayer(
             imageUrl={content.imageUrl}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
           />
         );
       break;
@@ -81,6 +93,7 @@ export function renderPracticePlayer(
             situationText={content.situationText}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
           />
         );
       break;

@@ -14,6 +14,7 @@ import { getWeeklyActivityStats } from "@/lib/overview-activity-queries";
 import { getTypeProgressForPackage } from "@/lib/skill-progress-queries";
 import { getStreakDays } from "@/lib/wfd-queries";
 import { getTuOverview } from "@/lib/tu-queries";
+import { getStudentAssignments, toAssignmentSummary } from "@/lib/student-assignment-queries";
 
 export default async function Home() {
   const session = await auth();
@@ -72,7 +73,7 @@ export default async function Home() {
     );
   }
 
-  const [classInfo, resumeSession, skillProgress, avatarUrl, activity, streak, typeProgress, recentAttempts, tuOverview] = await Promise.all([
+  const [classInfo, resumeSession, skillProgress, avatarUrl, activity, streak, typeProgress, recentAttempts, tuOverview, assignments] = await Promise.all([
     getActiveClassInfo(user.id),
     getResumeSession(user.id),
     getSkillProgress(user.id),
@@ -82,7 +83,9 @@ export default async function Home() {
     getTypeProgressForPackage(user.id, user.examPackage),
     getRecentAttempts(user.id, 1),
     getTuOverview(user.id),
+    getStudentAssignments(user.id),
   ]);
+  const openAssignments = assignments.filter((a) => a.status === "OPEN");
 
   const weekSchedule = getClassWeekSchedule(classInfo?.schedule ?? null);
   const practicedCount = typeProgress.reduce((sum, t) => sum + t.practicedCount, 0);
@@ -113,6 +116,8 @@ export default async function Home() {
           lastPracticedAt={lastPracticedAt}
           tuPracticedCount={tuPracticedCount}
           tuTotalCount={tuTotalCount}
+          assignments={openAssignments.slice(0, 3).map(toAssignmentSummary)}
+          openAssignmentCount={openAssignments.length}
         />
       </div>
     </RailShell>

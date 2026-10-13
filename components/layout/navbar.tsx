@@ -8,7 +8,8 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { Button } from "@/components/ui/button";
 import { getUserAvatarUrl } from "@/lib/dashboard-queries";
-import { isAdmin, hasAnyRole } from "@/lib/auth-helpers";
+import { hasAnyRole } from "@/lib/auth-helpers";
+import { isStaff } from "@/lib/admin/permissions";
 
 export async function Navbar() {
   const session = await auth();
@@ -18,7 +19,8 @@ export async function Navbar() {
   return (
     <header className="sticky top-0 z-40 bg-background/95 shadow-[0_2px_8px_rgba(0,0,0,0.06)] backdrop-blur supports-backdrop-filter:bg-background/80 dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
       <div id="site-nav-row" className="mx-auto flex h-16 max-w-7xl items-center gap-1 px-4">
-        <MobileNav examPackage={user?.examPackage ?? "academic"} isAdmin={isAdmin(user)} />
+        {/* Mục "Admin" hiện cho mọi vai trò nhân viên — trang /admin tự giới hạn theo quyền. */}
+        <MobileNav examPackage={user?.examPackage ?? "academic"} isAdmin={isStaff(user)} />
         <BrandLogo />
 
         <nav className="ml-2 hidden items-center gap-1.5 md:flex">
@@ -70,7 +72,7 @@ export async function Navbar() {
               </span>
             </Button>
           )}
-          {isAdmin(user) && (
+          {isStaff(user) && (
             <Button
               variant="ghost"
               className="group h-16 px-3 text-[14px] font-normal text-gray-500 dark:text-gray-400 hover:bg-transparent hover:text-gray-900 dark:hover:bg-transparent dark:hover:text-white"

@@ -28,6 +28,9 @@ export const RATE_LIMITS = {
   consultationUser: { limit: 5, windowMs: DAY },
   // Upload file (ảnh đại diện, ghi âm Test đầu vào).
   uploadUser: { limit: 20, windowMs: HOUR },
+  // Ghi âm Speaking lưu lại cho giáo viên chấm (chỉ bài thuộc bài tập được giao) —
+  // tách riêng để làm 1 bài Mock test nhiều câu nói không bị chạm giới hạn upload chung.
+  practiceAudioUser: { limit: 120, windowMs: HOUR },
 } as const;
 
 type RateLimitName = keyof typeof RATE_LIMITS;

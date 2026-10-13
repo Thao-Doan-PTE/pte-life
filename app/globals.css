@@ -375,3 +375,286 @@
     transition: none;
   }
 }
+
+/* ===== Admin LMS (docs/pte-admin-lms-handoff) — hệ màu v3: nền trắng/kem,
+ * than ấm cho chữ + sidebar, đỏ thương hiệu chỉ cho CTA/active/cảnh báo, màu
+ * thông tin dùng plum (không dùng xanh dương). Có cả sáng & tối (theo .dark của
+ * next-themes). Đỏ lấy theo đỏ thương hiệu đang dùng trong repo (#d32f2f). */
+.admin-theme {
+  --adm-bg: #ffffff;
+  --adm-surface: #faf6f2;
+  --adm-surface-2: #f3ece6;
+  --adm-line: #e7ddd5;
+  --adm-ink: #2b2120;
+  --adm-ink-2: #5d534c;
+  --adm-ink-3: #766b62;
+  --adm-brand: #d32f2f;
+  --adm-brand-hover: #b71c1c;
+  --adm-brand-text: #b71c1c;
+  --adm-brand-soft: #fdecea;
+  --adm-on-brand: #ffffff;
+  --adm-plum: #7b3f6e;
+  --adm-plum-soft: #f4e9f1;
+  --adm-ok: #2c7647;
+  --adm-ok-soft: #e4f1e8;
+  --adm-warn: #9a5b0e;
+  --adm-warn-soft: #fbefd9;
+  --adm-side: #2b2120;
+  --adm-side-2: #3a322d;
+  --adm-side-ink: #f1eae1;
+  --adm-side-ink-2: #b0a397;
+  --adm-shadow: 0 12px 40px rgba(42, 36, 33, 0.18);
+  --adm-scrim: rgba(20, 15, 13, 0.38);
+  background: var(--adm-surface);
+  color: var(--adm-ink);
+}
+
+.dark .admin-theme {
+  --adm-bg: #171311;
+  --adm-surface: #1f1a17;
+  --adm-surface-2: #2a2420;
+  --adm-line: #3a322c;
+  --adm-ink: #f2ece5;
+  --adm-ink-2: #c9beb3;
+  --adm-ink-3: #a89b8e;
+  /* Theo bộ màu v3 tối: nút đỏ đậm chữ trắng; chữ đỏ trên nền tối dùng đỏ nhạt. */
+  --adm-brand: #d32f2f;
+  --adm-brand-hover: #b71c1c;
+  --adm-brand-text: #ef9a9a;
+  --adm-brand-soft: #3a1f1f;
+  --adm-on-brand: #ffffff;
+  --adm-plum: #d49cc6;
+  --adm-plum-soft: #36242f;
+  --adm-ok: #74c493;
+  --adm-ok-soft: #1c2e22;
+  --adm-warn: #e6a951;
+  --adm-warn-soft: #33281a;
+  --adm-side: #100d0c;
+  --adm-side-2: #241e1b;
+  --adm-side-ink: #f1eae1;
+  --adm-side-ink-2: #a39588;
+  --adm-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --adm-scrim: rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+.admin-theme *:focus-visible {
+  outline: 2px solid var(--adm-brand);
+  outline-offset: 2px;
+}
+
+.admin-theme .adm-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Panel / thẻ */
+.admin-theme .adm-panel {
+  background: var(--adm-bg);
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+}
+.admin-theme .adm-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--adm-line);
+}
+.admin-theme .adm-panel-head h2 {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+/* Nhãn trạng thái (pill) — có chấm tròn màu chữ phía trước */
+.admin-theme .adm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  border-radius: 99px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.admin-theme .adm-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.admin-theme .adm-pill-ok { background: var(--adm-ok-soft); color: var(--adm-ok); }
+.admin-theme .adm-pill-warn { background: var(--adm-warn-soft); color: var(--adm-warn); }
+.admin-theme .adm-pill-bad { background: var(--adm-brand-soft); color: var(--adm-brand-text); }
+.admin-theme .adm-pill-plum { background: var(--adm-plum-soft); color: var(--adm-plum); }
+.admin-theme .adm-pill-mute { background: var(--adm-surface-2); color: var(--adm-ink-2); }
+
+/* Tag gói học / mã dạng bài */
+.admin-theme .adm-tag {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border: 1px solid var(--adm-line);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--adm-ink-2);
+}
+.admin-theme .adm-tag-ac {
+  border-color: var(--adm-brand);
+  color: var(--adm-brand-text);
+}
+
+/* Thanh tiến độ: <div class="adm-bar"><span style="width:..%"></span></div> */
+.admin-theme .adm-bar {
+  height: 6px;
+  min-width: 60px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--adm-surface-2);
+}
+.admin-theme .adm-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--adm-ink-2);
+}
+.admin-theme .adm-bar-red > span {
+  background: var(--adm-brand);
+}
+
+/* Nút */
+.admin-theme .adm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  border: 1px solid var(--adm-line);
+  border-radius: 8px;
+  background: var(--adm-bg);
+  padding: 7px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--adm-ink);
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.admin-theme .adm-btn:hover { background: var(--adm-surface-2); }
+.admin-theme .adm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.admin-theme .adm-btn-pri {
+  border-color: var(--adm-brand);
+  background: var(--adm-brand);
+  color: var(--adm-on-brand);
+}
+.admin-theme .adm-btn-pri:hover { border-color: var(--adm-brand-hover); background: var(--adm-brand-hover); }
+.admin-theme .adm-btn-sm { padding: 5px 10px; font-size: 12.5px; }
+.admin-theme .adm-btn-ghost { border-color: transparent; background: transparent; }
+.admin-theme .adm-btn-ghost:hover { background: var(--adm-surface-2); }
+.admin-theme .adm-btn-danger { border-color: var(--adm-brand); color: var(--adm-brand-text); }
+.admin-theme .adm-btn-danger:hover { background: var(--adm-brand-soft); }
+
+/* Ô nhập */
+.admin-theme .adm-input {
+  border: 1px solid var(--adm-line);
+  border-radius: 8px;
+  background: var(--adm-bg);
+  padding: 7px 10px;
+  font-size: 13.5px;
+  color: var(--adm-ink);
+}
+.admin-theme .adm-input:focus {
+  outline: none;
+  border-color: var(--adm-brand);
+  box-shadow: 0 0 0 3px var(--adm-brand-soft);
+}
+
+/* Nhóm lọc dạng segmented: các phần tử con là <a> hoặc <button>, [aria-current=true] = đang chọn */
+.admin-theme .adm-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  border: 1px solid var(--adm-line);
+  border-radius: 8px;
+  background: var(--adm-bg);
+  padding: 2px;
+}
+.admin-theme .adm-seg > * {
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--adm-ink-2);
+}
+.admin-theme .adm-seg > *:hover { background: var(--adm-surface-2); }
+.admin-theme .adm-seg > [aria-current="true"],
+.admin-theme .adm-seg > [aria-pressed="true"] {
+  background: var(--adm-ink);
+  color: var(--adm-bg);
+}
+
+/* Bảng: bọc trong .adm-tw để cuộn ngang trong khung trên màn hình hẹp */
+/* position: relative để phần tử ẩn dùng vị trí tuyệt đối (vd .sr-only trong tiêu đề
+ * cột) bị giữ trong khung cuộn, không làm cả trang bị cuộn ngang trên điện thoại. */
+.admin-theme .adm-tw { overflow-x: auto; position: relative; }
+.admin-theme .adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.admin-theme .adm-table th {
+  background: var(--adm-surface);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--adm-ink-3);
+  border-bottom: 1px solid var(--adm-line);
+}
+.admin-theme .adm-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--adm-line);
+  vertical-align: middle;
+}
+.admin-theme .adm-table tr:last-child td { border-bottom: none; }
+.admin-theme .adm-table tbody tr[data-clickable]:hover { background: var(--adm-surface); cursor: pointer; }
+
+/* Ô KPI */
+.admin-theme .adm-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+  background: var(--adm-bg);
+  padding: 16px;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.admin-theme a.adm-kpi:hover { border-color: var(--adm-ink-3); box-shadow: 0 4px 14px rgba(42, 36, 33, 0.08); }
+
+/* Avatar chữ cái */
+.admin-theme .adm-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--adm-surface-2);
+  font-weight: 650;
+  color: var(--adm-ink-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-theme *,
+  .admin-theme *::before {
+    transition: none !important;
+  }
+}

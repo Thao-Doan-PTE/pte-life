@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 type Phase = "idle" | "requesting" | "prep" | "recording" | "done" | "error";
 
 export interface RecordingResult {
+  /** object URL của bản ghi — chỉ để nghe lại trên trình duyệt. */
   audioUrl: string;
+  /** Dữ liệu ghi âm thật — gửi kèm khi nộp để giáo viên nghe lại nếu là bài được giao. */
+  audioBlob: Blob;
   transcript: string;
   durationSeconds: number;
   /** Số lần ngắt quãng (khoảng lặng > MIN_PAUSE_MS) đo bằng phân tích biên độ âm
@@ -252,13 +255,15 @@ export function SpeakingRecorderPlayer({
       const durationSeconds = Math.round(
         (Date.now() - recordingStartRef.current) / 1000
       );
-      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      // Dùng đúng định dạng trình duyệt ghi (Safari ghi audio/mp4, Chrome/Firefox audio/webm).
+      const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
       setPhase("done");
       stopStream();
       onRecordingComplete?.({
         audioUrl: url,
+        audioBlob: blob,
         transcript: transcriptRef.current,
         durationSeconds,
         pauseCount: pauseCountRef.current,

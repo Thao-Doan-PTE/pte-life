@@ -5,7 +5,7 @@ const WFD_TYPE_ID = "write-from-dictation";
 
 export async function getWfdQuestions(bank?: QuestionBank) {
   return prisma.question.findMany({
-    where: { questionTypeId: WFD_TYPE_ID, ...(bank ? { bank } : {}) },
+    where: { questionTypeId: WFD_TYPE_ID, archivedAt: null, ...(bank ? { bank } : {}) },
     orderBy: { code: "asc" },
   });
 }

@@ -13,14 +13,17 @@ export function SpeakingTextTaskPlayer({
   situationText,
   prepSeconds,
   recordSeconds,
+  collectAudio = false,
 }: {
   questionId: string;
   situationText: string;
   prepSeconds: number;
   recordSeconds: number;
+  /** Gửi kèm file ghi âm khi nộp — trang (server) tính, xem useSpeakingGrading. */
+  collectAudio?: boolean;
 }) {
   const { recording, setRecording, isGrading, result, error, handleSubmit } =
-    useSpeakingGrading(questionId);
+    useSpeakingGrading(questionId, { collectAudio });
 
   if (result && recording) {
     return (

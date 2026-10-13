@@ -24,9 +24,10 @@ export async function getLastPracticedType(userId: string): Promise<LastPractice
   if (!type) return null;
 
   const [totalCount, practicedRows] = await Promise.all([
-    prisma.question.count({ where: { questionTypeId: type.id } }),
+    prisma.question.count({ where: { questionTypeId: type.id, archivedAt: null } }),
     prisma.practiceAttempt.findMany({
-      where: { userId, questionTypeId: type.id },
+      // Cùng bộ lọc archivedAt với tổng ở trên để tử số không vượt mẫu số.
+      where: { userId, questionTypeId: type.id, question: { archivedAt: null } },
       select: { questionId: true },
       distinct: ["questionId"],
     }),
@@ -37,7 +38,7 @@ export async function getLastPracticedType(userId: string): Promise<LastPractice
     skill: type.skill,
     name: type.name,
     code: type.code,
-    practicedCount: practicedRows.length,
+    practicedCount: Math.min(practicedRows.length, totalCount),
     totalCount,
   };
 }

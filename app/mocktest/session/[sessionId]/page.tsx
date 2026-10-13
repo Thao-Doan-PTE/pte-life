@@ -7,6 +7,7 @@ import { submitMockAnswerAndAdvance } from "@/lib/actions/mocktest";
 import { PRACTICE_INSTRUCTIONS } from "@/lib/practice-config";
 import { QUESTION_TYPES } from "@/lib/question-types";
 import { requireClassStudent } from "@/lib/require-class-student";
+import { shouldCollectAssignmentAudio } from "@/lib/admin/assignment-link";
 
 export default async function MockTestSessionPage({
   params,
@@ -43,6 +44,13 @@ export default async function MockTestSessionPage({
   // thời gian nghe audio/bấm bắt đầu) nên có thể chuyển câu khi học viên đang
   // nói dở và làm mất bài nói.
   const isSpeaking = QUESTION_TYPES.find((t) => t.id === question.questionTypeId)?.skill === "speaking";
+  // Speaking: chỉ gửi kèm file ghi âm khi câu này đang là bài nộp chờ giáo viên
+  // chấm; lượt Mock test gắn bài tập thì báo cho server để gắn bài nộp vào đúng
+  // bài tập của lượt này (server kiểm tra lại cả hai khi nộp).
+  const collectAudio = isSpeaking
+    ? await shouldCollectAssignmentAudio(userId, question.id, question.questionTypeId)
+    : false;
+  const mockSessionId = mockSession.assignmentId ? mockSession.id : undefined;
   const timerSeconds = isSpeaking
     ? null
     : (instructions?.prepSeconds ?? 0) + (instructions?.recordSeconds ?? instructions?.timeLimitSeconds ?? 0) ||
@@ -64,7 +72,8 @@ export default async function MockTestSessionPage({
             question.questionTypeId,
             question.id,
             question.content as Record<string, unknown>,
-            instructions
+            instructions,
+            { collectAudio, mockSessionId }
           )
         ) : (
           <p className="text-center text-[15px] text-neutral-500">

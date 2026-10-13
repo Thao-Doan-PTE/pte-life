@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { QUESTION_TYPES, type Skill } from "@/lib/question-types";
 import { submitAttemptAction } from "@/lib/actions/practice";
 import { computeGseScores, type GseBreakdown } from "@/lib/gse-scoring";
+import { isClassAssignable } from "@/components/admin/assignments/assignment-meta";
 
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr];
@@ -26,7 +27,7 @@ export async function createQuestionTestSession(formData: FormData) {
   const count = Number(formData.get("count")) || undefined;
   const user = await requireUser();
   const questions = await prisma.question.findMany({
-    where: { questionTypeId, availableIn: { has: user.examPackage } },
+    where: { questionTypeId, availableIn: { has: user.examPackage }, archivedAt: null },
     orderBy: { code: "asc" },
   });
   if (questions.length === 0) {
@@ -74,7 +75,7 @@ export async function createSectionTestSession(formData: FormData) {
   const questionIds: string[] = [];
   for (const type of typesInSkill) {
     const question = await prisma.question.findFirst({
-      where: { questionTypeId: type.id, availableIn: { has: user.examPackage } },
+      where: { questionTypeId: type.id, availableIn: { has: user.examPackage }, archivedAt: null },
       orderBy: { code: "asc" },
     });
     if (question) questionIds.push(question.id);
@@ -111,7 +112,7 @@ export async function createFullTestSession(formData: FormData) {
   const questionIds: string[] = [];
   for (const type of types) {
     const questions = await prisma.question.findMany({
-      where: { questionTypeId: type.id, availableIn: { has: user.examPackage } },
+      where: { questionTypeId: type.id, availableIn: { has: user.examPackage }, archivedAt: null },
       orderBy: { code: "asc" },
     });
     if (questions.length === 0) continue;
@@ -144,6 +145,7 @@ export async function createTuMockTestSession(formData: FormData) {
     where: {
       questionTypeId: { in: TU_BANK_TYPE_IDS },
       bank: "TU",
+      archivedAt: null,
       availableIn: { has: user.examPackage },
     },
     orderBy: { code: "asc" },
@@ -160,6 +162,76 @@ export async function createTuMockTestSession(formData: FormData) {
       userId: user.id,
       mode: "tu",
       questionIds: ordered.map((q) => q.id),
+    },
+  });
+
+  redirect(`/mocktest/session/${session.id}`);
+}
+
+/** Học viên làm bài tập dạng Mock test được giao: tạo 1 lượt Mock test gồm đúng
+ * các câu của bài tập (theo thứ tự giáo viên sắp), gắn assignmentId. Bài nộp
+ * trong lượt thi tự gắn vào bài tập ở server (lib/admin/assignment-link.ts).
+ * Đang có lượt làm dở của chính bài tập này thì mở lại lượt đó thay vì tạo mới. */
+export async function startAssignmentMockAction(assignmentId: string): Promise<{ error: string }> {
+  let user: Awaited<ReturnType<typeof requireUser>>;
+  try {
+    user = await requireUser();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Bạn không có quyền thực hiện thao tác này." };
+  }
+  if (typeof assignmentId !== "string" || assignmentId.length === 0 || assignmentId.length > 64) {
+    return { error: "Không tìm thấy bài tập." };
+  }
+
+  // Chỉ bài tập của lớp học viên ĐANG học: học viên đã chuyển/rời lớp không làm
+  // tiếp Mock test của lớp cũ (bài nộp sẽ không còn gắn vào bài tập đó).
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      id: assignmentId,
+      recipients: { some: { studentId: user.id } },
+      class: { enrollments: { some: { studentId: user.id, status: "ACTIVE" } } },
+    },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      class: { select: { status: true } },
+      items: {
+        orderBy: { position: "asc" },
+        select: { questionId: true, question: { select: { questionTypeId: true } } },
+      },
+    },
+  });
+  if (!assignment) return { error: "Không tìm thấy bài tập." };
+  if (assignment.kind !== "MOCK") return { error: "Bài tập này không phải Mock test." };
+  // Lớp đã kết thúc/lưu trữ: bài tập coi như đã đóng (cùng quy tắc với
+  // resolveAssignmentLink — studentOpenAssignmentWhere).
+  if (assignment.status !== "OPEN" || !isClassAssignable(assignment.class.status)) {
+    return { error: "Bài tập đã đóng, không làm Mock test được nữa." };
+  }
+  if (assignment.items.length === 0) return { error: "Bài tập chưa có câu hỏi nào." };
+
+  const existing = await prisma.mockTestSession.findFirst({
+    where: { userId: user.id, assignmentId: assignment.id, status: "in_progress" },
+    orderBy: { startedAt: "desc" },
+    select: { id: true },
+  });
+  if (existing) redirect(`/mocktest/session/${existing.id}`);
+
+  // Cùng 1 dạng → ghi rõ dạng/kỹ năng (nhãn "Question Test — …" ở trang kết quả);
+  // nhiều dạng → để trống, nhãn chung "Mocktest". Không dùng mode "full" vì mode
+  // đó tính điểm GSE như cả bài thi thật.
+  const typeIds = [...new Set(assignment.items.map((i) => i.question.questionTypeId))];
+  const types = typeIds.map((id) => QUESTION_TYPES.find((t) => t.id === id));
+  const skills = [...new Set(types.map((t) => t?.skill))];
+  const session = await prisma.mockTestSession.create({
+    data: {
+      userId: user.id,
+      mode: "question",
+      questionTypeId: typeIds.length === 1 ? typeIds[0] : null,
+      skill: skills.length === 1 ? skills[0] : undefined,
+      questionIds: assignment.items.map((i) => i.questionId),
+      assignmentId: assignment.id,
     },
   });
 
@@ -258,7 +330,10 @@ export async function submitMockAnswerAndAdvance(
     } catch {
       // Không phải JSON — dùng nguyên chuỗi (WFD, Writing).
     }
-    await submitAttemptAction(questionId, response, 0);
+    // Truyền sessionId để bài nộp trong lượt Mock test được giao gắn vào đúng bài
+    // tập của lượt đó — submitAttemptAction tự kiểm tra lượt thi thuộc học viên,
+    // đang làm dở và có gắn bài tập (không tin tham số này).
+    await submitAttemptAction(questionId, response, 0, sessionId);
   }
   await advanceMockTestSession(sessionId);
 }

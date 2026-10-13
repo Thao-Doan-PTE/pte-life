@@ -6,6 +6,15 @@ import { ExamSpeakingManualPlayer } from "@/components/mocktest/exam-players/exa
 import { renderPracticePlayer } from "@/components/practice/practice-player-switch";
 import type { PracticeInstructions } from "@/lib/practice-config";
 
+export interface ExamPlayerOptions {
+  /** Speaking: gửi kèm file ghi âm khi nộp (câu đang là bài nộp chờ giáo viên
+   * chấm — trang tính ở server). Mặc định không gửi. */
+  collectAudio?: boolean;
+  /** Lượt Mock test gắn bài tập đang làm — server kiểm tra lại rồi ưu tiên gắn
+   * bài nộp vào bài tập của lượt đó. */
+  mockSessionId?: string;
+}
+
 /** Router cho khung "giao diện thi thật" (Exam Simulation / Mock Test) —
  * dùng bản exam-player tối giản, đúng chuẩn Pearson cho các dạng đã chuyển
  * đổi; dạng chưa chuyển (tương tác kéo-thả phức tạp: sắp xếp đoạn văn, điền
@@ -16,8 +25,10 @@ export function renderExamPlayer(
   typeId: string,
   questionId: string,
   content: Record<string, unknown>,
-  instructions: PracticeInstructions
+  instructions: PracticeInstructions,
+  options: ExamPlayerOptions = {}
 ) {
+  const { collectAudio = false, mockSessionId } = options;
   switch (typeId) {
     case "write-from-dictation":
       if (typeof content.sentence === "string")
@@ -35,6 +46,8 @@ export function renderExamPlayer(
             ttsText={typeof content.referenceText === "string" ? content.referenceText : undefined}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
+            mockSessionId={mockSessionId}
           />
         );
       break;
@@ -49,6 +62,8 @@ export function renderExamPlayer(
             audioUrl={content.audioUrl}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
+            mockSessionId={mockSessionId}
           />
         );
       break;
@@ -63,6 +78,8 @@ export function renderExamPlayer(
             passageText={content.passage}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
+            mockSessionId={mockSessionId}
           />
         );
       break;
@@ -75,6 +92,8 @@ export function renderExamPlayer(
             imageUrl={content.imageUrl}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
+            mockSessionId={mockSessionId}
           />
         );
       break;
@@ -87,6 +106,8 @@ export function renderExamPlayer(
             situationText={content.situationText}
             prepSeconds={instructions.prepSeconds!}
             recordSeconds={instructions.recordSeconds!}
+            collectAudio={collectAudio}
+            mockSessionId={mockSessionId}
           />
         );
       break;
@@ -97,6 +118,7 @@ export function renderExamPlayer(
         return (
           <ExamTextAnswerPlayer
             questionId={questionId}
+            mockSessionId={mockSessionId}
             instructionText={instructions.description}
             passageText={content.prompt}
           />
@@ -107,6 +129,7 @@ export function renderExamPlayer(
         return (
           <ExamTextAnswerPlayer
             questionId={questionId}
+            mockSessionId={mockSessionId}
             instructionText={instructions.description}
             passageText={content.passage}
           />
@@ -117,6 +140,7 @@ export function renderExamPlayer(
         return (
           <ExamTextAnswerPlayer
             questionId={questionId}
+            mockSessionId={mockSessionId}
             instructionText={instructions.description}
             audioUrl={content.audioUrl}
           />
@@ -193,5 +217,5 @@ export function renderExamPlayer(
   // Dạng tương tác phức tạp chưa có bản exam riêng (kéo-thả/dropdown/gạch từ) —
   // dùng tạm player luyện tập thường, vẫn chấm điểm đúng, chỉ chưa khớp 100%
   // giao diện thi thật.
-  return renderPracticePlayer(typeId, questionId, content, instructions);
+  return renderPracticePlayer(typeId, questionId, content, instructions, { collectAudio });
 }

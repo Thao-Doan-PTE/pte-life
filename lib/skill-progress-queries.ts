@@ -23,11 +23,13 @@ export async function getTypeProgressForPackage(userId: string, examPackage: Exa
   const [totalCounts, practicedRows] = await Promise.all([
     prisma.question.groupBy({
       by: ["questionTypeId"],
-      where: { questionTypeId: { in: typeIds } },
+      where: { questionTypeId: { in: typeIds }, archivedAt: null },
       _count: { questionTypeId: true },
     }),
     prisma.practiceAttempt.findMany({
-      where: { userId, questionTypeId: { in: typeIds } },
+      // Cùng bộ lọc archivedAt với tổng ở trên để tử số không vượt mẫu số
+      // (câu đã luyện rồi bị lưu trữ không còn được tính).
+      where: { userId, questionTypeId: { in: typeIds }, question: { archivedAt: null } },
       select: { questionTypeId: true, questionId: true },
       distinct: ["questionId"],
     }),
@@ -39,15 +41,18 @@ export async function getTypeProgressForPackage(userId: string, examPackage: Exa
     practicedMap.set(row.questionTypeId, (practicedMap.get(row.questionTypeId) ?? 0) + 1);
   }
 
-  return types.map((t) => ({
-    id: t.id,
-    skill: t.skill,
-    code: t.code,
-    name: t.name,
-    descriptionVi: t.descriptionVi,
-    isNewType: t.isNewType,
-    frequencyTier: t.frequencyTier,
-    totalCount: totalMap.get(t.id) ?? 0,
-    practicedCount: practicedMap.get(t.id) ?? 0,
-  }));
+  return types.map((t) => {
+    const totalCount = totalMap.get(t.id) ?? 0;
+    return {
+      id: t.id,
+      skill: t.skill,
+      code: t.code,
+      name: t.name,
+      descriptionVi: t.descriptionVi,
+      isNewType: t.isNewType,
+      frequencyTier: t.frequencyTier,
+      totalCount,
+      practicedCount: Math.min(practicedMap.get(t.id) ?? 0, totalCount),
+    };
+  });
 }

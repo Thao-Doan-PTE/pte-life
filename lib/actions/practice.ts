@@ -1,10 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { requirePracticeAccess } from "@/lib/practice-access";
 import { toOpaqueParagraphId } from "@/lib/opaque-id";
 import { prisma } from "@/lib/prisma";
 import { scoreAttempt } from "@/lib/scoring/rule-based";
+import { createAttemptWithAssignmentLink, getMockSessionAssignmentId } from "@/lib/admin/assignment-link";
 import type { ScoreResult } from "@/lib/scoring/types";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
@@ -22,10 +24,13 @@ export async function getPreviousAttemptScore(questionId: string): Promise<numbe
   return last?.pteScore ?? null;
 }
 
+/** `mockSessionId` (tuỳ chọn): lượt Mock test đang làm — chỉ dùng để ưu tiên gắn
+ * bài vào bài tập của lượt đó, server tự kiểm tra lượt thi thuộc học viên. */
 export async function submitAttemptAction(
   questionId: string,
   response: unknown,
-  durationSec = 0
+  durationSec = 0,
+  mockSessionId?: string
 ): Promise<ScoreResult> {
   const user = await requirePracticeAccess();
   // Câu trả lời được lưu nguyên vào DB — chặn payload khổng lồ.
@@ -57,18 +62,23 @@ export async function submitAttemptAction(
     result.reveal = { ...result.reveal, correctOrder: (result.reveal.correctOrder as string[]).map(toOpaque) };
   }
 
-  await prisma.practiceAttempt.create({
-    data: {
-      userId: user.id,
-      questionId: question.id,
-      questionTypeId: question.questionTypeId,
+  // Bài làm trong lượt Mock test được giao ưu tiên gắn vào đúng bài tập của
+  // lượt đó (mockSessionId được kiểm tra lại ở server, xem assignment-link.ts).
+  const preferredAssignmentId = mockSessionId
+    ? await getMockSessionAssignmentId(user.id, mockSessionId, question.id)
+    : null;
+  const link = await createAttemptWithAssignmentLink(
+    { userId: user.id, questionId: question.id, questionTypeId: question.questionTypeId, preferredAssignmentId },
+    {
       scorePct: result.scorePct,
       pteScore: result.pteScore,
       isCorrect: result.correct,
       response: response as Prisma.InputJsonValue,
       durationSec: Math.min(24 * 3600, Math.max(0, Math.round(Number(durationSec) || 0))),
-    },
-  });
+    }
+  );
+
+  if (link.assignmentId) revalidatePath("/bai-tap");
 
   return result;
 }

@@ -38,7 +38,7 @@ export interface TuOverview {
  * ngân hàng PTE thường, dù cùng 2 dạng WFD/RS. */
 export async function getTuOverview(userId: string): Promise<TuOverview> {
   const questions = await prisma.question.findMany({
-    where: { questionTypeId: { in: [...TU_TYPE_IDS] }, bank: "TU" },
+    where: { questionTypeId: { in: [...TU_TYPE_IDS] }, bank: "TU", archivedAt: null },
     select: { id: true, questionTypeId: true },
   });
   const questionIds = questions.map((q) => q.id);

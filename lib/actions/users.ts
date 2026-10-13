@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
+import { writeAuditLog } from "@/lib/admin/audit";
 import type { Role } from "@/lib/generated/prisma/enums";
 
 const ALL_ROLES: Role[] = ["ADMIN", "OPS", "ACADEMIC_LEAD", "TEACHER", "STUDENT"];
@@ -36,17 +37,27 @@ export async function updateUserRolesAction(formData: FormData) {
     throw new Error("Bạn không thể tự bỏ quyền ADMIN của chính mình.");
   }
 
-  await prisma.user.update({ where: { id: userId }, data: { roles } });
-  await prisma.auditLog.create({
-    data: {
-      actorId: admin.id,
-      action: "update_roles",
-      entityType: "User",
-      entityId: userId,
-      detail: `Đổi role thành: ${roles.join(", ")}`,
-    },
+  // Đổi role + ghi nhật ký trong cùng 1 transaction: ghi log lỗi thì không đổi role
+  // (không có thay đổi quyền nào lọt khỏi nhật ký). before/after để biết role nào bị bỏ.
+  await prisma.$transaction(async (tx) => {
+    const prev = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { roles: true } });
+    await tx.user.update({ where: { id: userId }, data: { roles } });
+    await writeAuditLog(
+      {
+        actor: admin,
+        action: "update_roles",
+        entityType: "User",
+        entityId: userId,
+        targetUserId: userId,
+        detail: `Đổi role thành: ${roles.join(", ")}`,
+        before: { roles: prev.roles },
+        after: { roles },
+      },
+      tx
+    );
   });
   revalidatePath("/admin/users");
+  revalidatePath("/admin/logs");
 }
 
 export async function toggleUserStatusAction(formData: FormData) {
@@ -55,18 +66,31 @@ export async function toggleUserStatusAction(formData: FormData) {
   if (userId === admin.id) {
     throw new Error("Bạn không thể tự khoá tài khoản của chính mình.");
   }
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { status: true } });
   const nextStatus = user.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
 
-  await prisma.user.update({ where: { id: userId }, data: { status: nextStatus } });
-  await prisma.auditLog.create({
-    data: {
-      actorId: admin.id,
-      action: "toggle_status",
-      entityType: "User",
-      entityId: userId,
-      detail: `Đổi trạng thái thành: ${nextStatus}`,
-    },
+  // So-sánh-rồi-ghi: chỉ đổi khi trạng thái vẫn đúng như lúc đọc, và chỉ ghi log khi
+  // thật sự đổi được 1 dòng — 2 lần bấm cùng lúc không lật 2 lần / ghi 2 log trái ngược.
+  await prisma.$transaction(async (tx) => {
+    const { count } = await tx.user.updateMany({
+      where: { id: userId, status: user.status },
+      data: { status: nextStatus },
+    });
+    if (count !== 1) return;
+    await writeAuditLog(
+      {
+        actor: admin,
+        action: "toggle_status",
+        entityType: "User",
+        entityId: userId,
+        targetUserId: userId,
+        detail: `Đổi trạng thái thành: ${nextStatus}`,
+        before: { status: user.status },
+        after: { status: nextStatus },
+      },
+      tx
+    );
   });
   revalidatePath("/admin/users");
+  revalidatePath("/admin/logs");
 }

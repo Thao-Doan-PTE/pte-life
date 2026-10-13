@@ -18,6 +18,8 @@ export function ExamSpeakingAudioPlayer({
   ttsText,
   prepSeconds,
   recordSeconds,
+  collectAudio = false,
+  mockSessionId,
 }: {
   questionId: string;
   instructionText: string;
@@ -25,9 +27,13 @@ export function ExamSpeakingAudioPlayer({
   ttsText?: string;
   prepSeconds: number;
   recordSeconds: number;
+  /** Gửi kèm file ghi âm khi nộp — trang (server) tính, xem useSpeakingGrading. */
+  collectAudio?: boolean;
+  /** Lượt Mock test được giao đang làm — để server gắn bài nộp vào đúng bài tập. */
+  mockSessionId?: string;
 }) {
   const [canRecord, setCanRecord] = useState(false);
-  const { recording, setRecording, handleSubmit } = useSpeakingGrading(questionId);
+  const { recording, setRecording, handleSubmit } = useSpeakingGrading(questionId, { collectAudio, mockSessionId });
 
   useRegisterBeforeAdvance(
     recording

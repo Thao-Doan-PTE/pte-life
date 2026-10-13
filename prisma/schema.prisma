@@ -82,6 +82,11 @@ model User {
   reservationsLeft Int         @default(2)
   hasSeenWelcome   Boolean     @default(false)
   avatarUrl        String?
+  /// Bảo lưu đến ngày này (null = không bảo lưu). Chỉ để hiển thị trạng thái —
+  /// lượt bảo lưu vẫn trừ reservationsLeft và cộng 30 ngày vào expiresAt như cũ.
+  reservedUntil    DateTime?
+  /// Điểm mục tiêu PTE (10–90) của học viên.
+  targetScore      Int?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
@@ -93,7 +98,12 @@ model User {
   createdClasses       Class[]               @relation("ClassCreatedBy")
   teachingClasses      ClassTeacher[]
   classEnrollments     ClassEnrollment[]
-  auditLogs            AuditLog[]
+  auditLogs            AuditLog[]            @relation("AuditLogActor")
+  auditLogsAboutMe     AuditLog[]            @relation("AuditLogTarget")
+  teacherProfile       TeacherProfile?
+  assignmentsCreated   Assignment[]          @relation("AssignmentCreatedBy")
+  assignmentRecipients AssignmentRecipient[]
+  gradesGiven          AttemptGrade[]        @relation("AttemptGradedBy")
   entryTestAttempts    EntryTestAttempt[]    @relation("EntryTestAttemptsForUser")
   consultationRequests ConsultationRequest[]
   entryTestGraded      EntryTestAttempt[]    @relation("EntryTestAttemptsGradedBy")
@@ -112,6 +122,9 @@ model Class {
   schedule    String?
   meetingUrl  String?
   status      ClassStatus @default(UPCOMING)
+  /// Tổng số buổi của khoá (null = chưa nhập) và số buổi đã học — vận hành nhập tay.
+  sessionsTotal Int?
+  sessionsDone  Int       @default(0)
   createdById String
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -119,6 +132,7 @@ model Class {
   createdBy   User              @relation("ClassCreatedBy", fields: [createdById], references: [id])
   teachers    ClassTeacher[]
   enrollments ClassEnrollment[]
+  assignments Assignment[]
 }
 
 model ClassTeacher {
@@ -150,22 +164,44 @@ model ClassEnrollment {
   @@index([studentId])
 }
 
+/// Hồ sơ giáo viên (chuyên môn) — 1-1 với User có role TEACHER, tạo khi cần.
+model TeacherProfile {
+  userId    String   @id
+  specialty String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 /// Audit log tổng quát cho các thao tác LMS (Class/ClassTeacher/ClassEnrollment
 /// trở đi) — tách riêng khỏi ReservationLog hiện có (ReservationLog chỉ dành
 /// cho đổi gói/gia hạn/bảo lưu, giữ nguyên không đụng tới). Xem docs/LMS_DECISIONS.md.
 model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String
-  action     String
-  entityType String
-  entityId   String
-  detail     String?
-  createdAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  actorId      String
+  action       String
+  entityType   String
+  entityId     String
+  detail       String?
+  /// Vai trò của người thao tác tại thời điểm thao tác (dòng cũ: rỗng = không rõ).
+  actorRoles   Role[]   @default([])
+  /// Học viên/người dùng bị tác động (nếu có).
+  targetUserId String?
+  /// Dữ liệu trước/sau khi thay đổi.
+  before       Json?
+  after        Json?
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
 
-  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  actor      User  @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: Cascade)
+  targetUser User? @relation("AuditLogTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
 
   @@index([actorId])
   @@index([entityType, entityId])
+  @@index([targetUserId, createdAt])
+  @@index([createdAt])
 }
 
 /// Log các lần admin/CSKH gán gói, gia hạn, hoặc dùng lượt bảo lưu cho học viên (Bước 11).
@@ -207,10 +243,14 @@ model MockTestSession {
   writingScore   Int?
   startedAt      DateTime       @default(now())
   completedAt    DateTime?
+  /// Lượt Mock test làm theo bài tập được giao (null = tự luyện).
+  assignmentId   String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignment Assignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([assignmentId])
 }
 
 /// Ngân hàng câu hỏi: mỗi row là 1 câu hỏi cụ thể thuộc 1 dạng (questionTypeId
@@ -224,11 +264,16 @@ model Question {
   availableIn    ExamPackage[]
   bank           QuestionBank  @default(PTE)
   content        Json
+  /// Nguồn đề, vd "Pearson", "PTE-Life biên soạn", "Tủ T10/2026".
+  source         String?
+  /// Ẩn/lưu trữ thay vì xoá hẳn (null = đang dùng).
+  archivedAt     DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  attempts  PracticeAttempt[]
-  favorites Favorite[]
+  attempts        PracticeAttempt[]
+  favorites       Favorite[]
+  assignmentItems AssignmentItem[]
 
   @@index([questionTypeId])
   @@index([bank])
@@ -246,13 +291,23 @@ model PracticeAttempt {
   isCorrect      Boolean
   response       Json
   durationSec    Int      @default(0)
+  /// Bài làm thuộc bài tập được giao (null = tự luyện).
+  assignmentId   String?
+  /// null = không cần giáo viên chấm (mọi bài tự luyện và bài cũ).
+  reviewStatus   ReviewStatus?
+  /// File ghi âm Speaking (để giáo viên nghe khi chấm).
+  audioUrl       String?
   createdAt      DateTime @default(now())
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   Question      @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  assignment Assignment?   @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  grade      AttemptGrade?
 
   @@index([userId])
   @@index([questionId])
+  @@index([assignmentId])
+  @@index([reviewStatus, createdAt])
 }
 
 /// Câu hỏi học viên đánh dấu "Ưa thích" để lọc lại nhanh trong danh sách câu hỏi.
@@ -408,4 +463,120 @@ model RateLimitCounter {
 
   @@id([key, windowStart])
   @@index([expiresAt])
+}
+
+// ===== Admin LMS đợt 2: Giao bài tập & Chấm bài =====
+
+enum AssignmentKind {
+  PRACTICE
+  TU
+  MOCK
+}
+
+enum AssignmentStatus {
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+enum ReviewStatus {
+  PENDING
+  GRADED
+}
+
+/// Bài tập giao cho 1 lớp: tập câu hỏi cụ thể (AssignmentItem) + danh sách học
+/// viên phải nộp chốt tại thời điểm giao (AssignmentRecipient).
+model Assignment {
+  id              String           @id @default(cuid())
+  classId         String
+  title           String
+  kind            AssignmentKind
+  /// id dạng bài trong lib/question-types.ts.
+  questionTypeIds String[]
+  note            String?
+  dueAt           DateTime?
+  notify          Boolean          @default(false)
+  status          AssignmentStatus @default(OPEN)
+  createdById     String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  class        Class                 @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdBy    User                  @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
+  items        AssignmentItem[]
+  recipients   AssignmentRecipient[]
+  attempts     PracticeAttempt[]
+  mockSessions MockTestSession[]
+
+  @@index([classId, status])
+  @@index([dueAt])
+}
+
+model AssignmentItem {
+  id           String @id @default(cuid())
+  assignmentId String
+  questionId   String
+  position     Int    @default(0)
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  /// Restrict: câu hỏi đang nằm trong bài tập thì không xoá hẳn được (ẩn bằng archivedAt).
+  question   Question   @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([assignmentId, questionId])
+  @@index([questionId])
+}
+
+/// Học viên phải nộp — chốt theo sĩ số lớp (ACTIVE) lúc giao bài.
+model AssignmentRecipient {
+  id           String    @id @default(cuid())
+  assignmentId String
+  studentId    String
+  completedAt  DateTime?
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId])
+}
+
+/// Rubric chấm của giáo viên theo dạng bài, có phiên bản — sửa được không cần lập trình.
+model GradingRubric {
+  id             String   @id @default(cuid())
+  questionTypeId String
+  version        Int      @default(1)
+  /// [{ key, label, max }]
+  criteria       Json
+  isActive       Boolean  @default(true)
+  note           String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  grades AttemptGrade[]
+
+  @@unique([questionTypeId, version])
+  @@index([questionTypeId, isActive])
+}
+
+/// Điểm giáo viên chấm cho 1 bài làm — lưu riêng, không ghi đè điểm AI
+/// (PracticeAttempt.scorePct/pteScore vẫn dùng cho biểu đồ & điểm Mock test).
+model AttemptGrade {
+  id         String   @id @default(cuid())
+  attemptId  String   @unique
+  rubricId   String?
+  /// [{ key, label, max, score }] — bản chụp rubric lúc chấm.
+  criteria   Json
+  total      Int
+  maxTotal   Int
+  comment    String?
+  gradedById String
+  gradedAt   DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  attempt  PracticeAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  rubric   GradingRubric?  @relation(fields: [rubricId], references: [id], onDelete: SetNull)
+  gradedBy User            @relation("AttemptGradedBy", fields: [gradedById], references: [id])
+
+  @@index([gradedById])
 }

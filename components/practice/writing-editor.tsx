@@ -2,11 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
-
-function countWords(text: string) {
-  const trimmed = text.trim();
-  return trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length;
-}
+// Cùng bộ đếm với kiểm tra Form phía server để số từ hiển thị khớp với số từ được chấm.
+import { countWords } from "@/lib/scoring/writing-form";
 
 function formatTime(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);

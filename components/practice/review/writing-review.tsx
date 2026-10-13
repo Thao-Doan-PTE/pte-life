@@ -68,11 +68,39 @@ export function WritingReview({
   studentText: string;
   grade: WritingGradeResult;
 }) {
+  const rules = grade.appliedRules ?? [];
   return (
     <div className="flex flex-col gap-4">
+      {rules.length > 0 && (
+        <div className="flex flex-col gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-[15px]" role="note">
+          <p className="font-semibold">Quy tắc chấm đã áp dụng</p>
+          {rules.map((rule, i) => (
+            <p key={i} className="text-muted-foreground">
+              {rule}
+            </p>
+          ))}
+        </div>
+      )}
+
       <div className="rounded-xl border bg-card p-4">
         <AnnotatedText text={studentText} issues={grade.issues} />
       </div>
+
+      {grade.formCheck && (
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-muted-foreground">
+          <span>
+            Số từ: <span className="font-medium text-foreground">{grade.formCheck.wordCount}</span>
+          </span>
+          <span>
+            Số câu: <span className="font-medium text-foreground">{grade.formCheck.sentenceCount}</span>
+          </span>
+          {grade.integrity && grade.integrity.templateDensityPct > 0 && (
+            <span>
+              Câu mẫu chung chung: <span className="font-medium text-foreground">{grade.integrity.templateDensityPct}%</span>
+            </span>
+          )}
+        </div>
+      )}
 
       {grade.issues.length > 0 && (
         <div className="flex flex-col gap-2">

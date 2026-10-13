@@ -11,6 +11,7 @@ import { scoreColorClass } from "@/lib/format";
 import { getSessionQuestionResults } from "@/lib/mocktest-queries";
 import { mockTestSessionLabel } from "@/lib/mocktest-label";
 import { requireClassStudent } from "@/lib/require-class-student";
+import { QUESTION_TYPES } from "@/lib/question-types";
 
 export default async function MockTestResultPage({
   params,
@@ -93,7 +94,7 @@ export default async function MockTestResultPage({
           {results.map((r, i) => (
             <Link
               key={r.questionId}
-              href={`/practice/${mockSession.skill ?? ""}/${r.questionTypeId}/${r.questionId}`}
+              href={`/practice/${QUESTION_TYPES.find((t) => t.id === r.questionTypeId)?.skill ?? mockSession.skill ?? ""}/${r.questionTypeId}/${r.questionId}`}
               className="flex items-center justify-between gap-3 px-4 py-3 text-[15px] transition-colors hover:bg-muted"
             >
               <div className="flex items-center gap-3">

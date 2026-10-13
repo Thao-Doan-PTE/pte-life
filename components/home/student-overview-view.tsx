@@ -7,6 +7,8 @@ import { ClassWeekStrip, ClassScheduleList } from "@/components/home/class-sched
 import { WEEKLY_GOAL_SESSIONS, type WeeklyActivityStats } from "@/lib/overview-activity-queries";
 import type { ActiveClassInfo, ResumeSessionInfo, ClassWeekSession } from "@/lib/student-overview-queries";
 import type { SkillProgress } from "@/lib/mock-dashboard";
+import type { StudentAssignmentSummary } from "@/lib/student-assignment-queries";
+import { ASSIGNMENT_KIND_LABEL, DUE_TONE_STYLE, dueLabel } from "@/components/home/assignments/assignment-labels";
 
 const SKILL_ORDER: Skill[] = ["speaking", "writing", "reading", "listening"];
 const SKILL_ICONS: Record<Skill, typeof Mic> = { speaking: Mic, writing: PenLine, reading: BookOpen, listening: Headphones };
@@ -16,8 +18,18 @@ function resumeTitle(session: ResumeSessionInfo): { title: string; subtitle: str
     const type = QUESTION_TYPES.find((t) => t.id === session.questionTypeId);
     if (type) return { title: type.name, subtitle: `Question Test · ${SKILL_LABELS_VI[type.skill]}` };
   }
+  // Mock test của bài tập được giao gồm nhiều dạng: mode "question", không có questionTypeId.
+  if (session.mode === "question") {
+    return {
+      title: "Mock test bài tập",
+      subtitle: session.skill ? SKILL_LABELS_VI[session.skill as Skill] : "Nhiều dạng bài",
+    };
+  }
   if (session.mode === "section" && session.skill) {
     return { title: "Section Test", subtitle: SKILL_LABELS_VI[session.skill as Skill] };
+  }
+  if (session.mode === "tu") {
+    return { title: "Thi thử Đề Tủ", subtitle: "Write From Dictation · Repeat Sentence" };
   }
   return { title: "Full Test", subtitle: "Trọn bộ 4 kỹ năng" };
 }
@@ -426,18 +438,57 @@ function MyPracticeSection({
   );
 }
 
-function AssignmentsCard() {
+function AssignmentsCard({ assignments, openCount }: { assignments: StudentAssignmentSummary[]; openCount: number }) {
   return (
     <StageCard>
-      <div className="mb-1.5">
+      <div className="mb-1.5 flex items-baseline justify-between gap-3">
         <b className="text-[16px]" style={{ color: "var(--rail-charcoal)" }}>
           Bài giáo viên giao
+          {openCount > 0 && (
+            <span className="ml-2 text-[13px] font-semibold" style={{ color: "var(--rail-ink-dim)" }}>
+              {openCount} bài đang mở
+            </span>
+          )}
         </b>
+        <Link href="/bai-tap" className="shrink-0 text-[15px] font-semibold" style={{ color: "var(--rail-red-text)" }}>
+          Xem tất cả →
+        </Link>
       </div>
-      <p className="m-0" style={{ color: "var(--rail-ink-dim)" }}>
-        Tính năng giáo viên giao bài và theo dõi bài chấm đang được xây dựng. Bạn sẽ thấy bài được giao và hạn nộp ở
-        đây khi tính năng ra mắt.
-      </p>
+      {assignments.length === 0 ? (
+        <p className="m-0" style={{ color: "var(--rail-ink-dim)" }}>
+          Chưa có bài tập nào được giao
+        </p>
+      ) : (
+        <ul className="m-0 mt-2 flex list-none flex-col divide-y divide-[var(--rail-line)] p-0">
+          {assignments.map((a) => {
+            const completed = a.totalCount > 0 && a.submittedCount >= a.totalCount;
+            const due = dueLabel(a.dueAt, { completed });
+            const pct = a.totalCount > 0 ? Math.round((a.submittedCount / a.totalCount) * 100) : 0;
+            return (
+              <li key={a.id} className="py-3 first:pt-1 last:pb-0">
+                <Link href="/bai-tap" className="group block min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-bold group-hover:underline" style={{ color: "var(--rail-charcoal)" }} title={a.title}>
+                      {a.title}
+                    </span>
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-bold whitespace-nowrap" style={DUE_TONE_STYLE[due.tone]}>
+                      {due.label}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 mb-1.5 text-[13px]" style={{ color: "var(--rail-ink-dim)" }}>
+                    {ASSIGNMENT_KIND_LABEL[a.kind]} · Lớp {a.classCode} · Đã nộp {a.submittedCount}/{a.totalCount} câu
+                    {a.pendingCount > 0 ? ` · ${a.pendingCount} chờ chấm` : ""}
+                    {a.gradedCount > 0 ? ` · ${a.gradedCount} đã chấm` : ""}
+                  </p>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--rail-line)" }} aria-hidden="true">
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "var(--rail-red)" }} />
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </StageCard>
   );
 }
@@ -455,7 +506,13 @@ export function StudentOverviewView({
   lastPracticedAt,
   tuPracticedCount,
   tuTotalCount,
+  assignments = [],
+  openAssignmentCount = 0,
 }: {
+  /** Tối đa 3 bài đang mở (hạn gần nhất trước) cho thẻ "Bài giáo viên giao". */
+  assignments?: StudentAssignmentSummary[];
+  /** Tổng số bài đang mở của học viên. */
+  openAssignmentCount?: number;
   classInfo: ActiveClassInfo | null;
   weekSchedule: ClassWeekSession[];
   resumeSession: ResumeSessionInfo | null;
@@ -503,7 +560,7 @@ export function StudentOverviewView({
       />
 
       <div id="bai-giao-vien-giao">
-        <AssignmentsCard />
+        <AssignmentsCard assignments={assignments} openCount={openAssignmentCount} />
       </div>
     </div>
   );

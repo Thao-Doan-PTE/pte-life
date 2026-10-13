@@ -48,8 +48,16 @@ function buildToolSchema(criteria: string[]) {
           },
         },
         generalFeedback: { type: "string" },
+        integrity: {
+          type: "object",
+          properties: {
+            offTopic: { type: "boolean" },
+            templateDensityPct: { type: "integer", minimum: 0, maximum: 100 },
+          },
+          required: ["offTopic", "templateDensityPct"],
+        },
       },
-      required: ["criteria", "issues", "generalFeedback"],
+      required: ["criteria", "issues", "generalFeedback", "integrity"],
     },
   };
 }
@@ -67,11 +75,10 @@ export class AnthropicWritingGrader implements WritingGrader {
   async grade(input: WritingGradeInput): Promise<WritingGradeResult> {
     const criteria = CRITERIA_BY_TASK[input.taskType];
     const tool = buildToolSchema(criteria);
-    const prompt = buildGradingPrompt(
-      input.taskType,
-      input.sourceText,
-      input.studentText
-    );
+    const prompt = buildGradingPrompt(input.taskType, input.sourceText, input.studentText, {
+      wordCount: input.wordCount,
+      sentenceCount: input.sentenceCount,
+    });
 
     const message = await this.client.messages.create({
       model: MODEL,

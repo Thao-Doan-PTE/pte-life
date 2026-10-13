@@ -23,18 +23,21 @@ export function SpeakingAudioTaskPlayer({
   ttsText,
   prepSeconds,
   recordSeconds,
+  collectAudio = false,
 }: {
   questionId: string;
   audioUrl?: string;
   ttsText?: string;
   prepSeconds: number;
   recordSeconds: number;
+  /** Gửi kèm file ghi âm khi nộp — trang (server) tính, xem useSpeakingGrading. */
+  collectAudio?: boolean;
 }) {
   const [canRecord, setCanRecord] = useState(false);
   const [countdown, setCountdown] = useState(DEMO_COUNTDOWN_SECONDS);
   const [ready, setReady] = useState(false);
   const { recording, setRecording, isGrading, result, error, handleSubmit } =
-    useSpeakingGrading(questionId);
+    useSpeakingGrading(questionId, { collectAudio });
 
   // Đếm ngược chuẩn bị rồi phát câu luôn, không có tiếng báo hiệu ở giữa.
   useEffect(() => {

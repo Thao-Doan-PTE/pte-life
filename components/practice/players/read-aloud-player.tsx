@@ -18,14 +18,17 @@ export function ReadAloudPlayer({
   passage,
   prepSeconds,
   recordSeconds,
+  collectAudio = false,
 }: {
   questionId: string;
   passage: string;
   prepSeconds: number;
   recordSeconds: number;
+  /** Gửi kèm file ghi âm khi nộp — trang (server) tính, xem useSpeakingGrading. */
+  collectAudio?: boolean;
 }) {
   const { recording, setRecording, isGrading, result, error, handleSubmit } =
-    useSpeakingGrading(questionId);
+    useSpeakingGrading(questionId, { collectAudio });
   const [samplePlaying, setSamplePlaying] = useState(false);
   const [sampleVoice, setSampleVoice] = useState("en-AU-NatashaNeural");
   const [sampleRate, setSampleRate] = useState(1);
