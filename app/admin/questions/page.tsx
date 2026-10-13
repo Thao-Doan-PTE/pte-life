@@ -1,236 +1,123 @@
-import Link from "next/link";
-import { AdminContent, AdminPageHeader, Panel, SegLinks } from "@/components/admin/admin-ui";
+import { AdminContent, AdminPageHeader } from "@/components/admin/admin-ui";
 import { QuestionImportForm } from "@/components/admin/question-import-form";
 import { QuestionBulkList } from "@/components/admin/question-bulk-list";
-import { BankSummaryCards } from "@/components/admin/question-bank/bank-summary-cards";
-import { QuestionTypeTable } from "@/components/admin/question-bank/question-type-table";
 import { QuestionTypeNav } from "@/components/admin/question-bank/question-type-nav";
-import { TuOnlyToggle, UrlToggle } from "@/components/admin/question-bank/tu-only-toggle";
-import {
-  appliesToLabel,
-  formatCount,
-  gradingModeOf,
-  GRADING_MODE_LABEL,
-  parseSkillGroup,
-  SKILL_GROUPS,
-  skillGroupOf,
-  type SkillGroup,
-} from "@/components/admin/question-bank/bank-meta";
-import { getQuestionCounts, getQuestionsForTypeAdmin, type QuestionTypeCount } from "@/lib/actions/admin-questions";
+import { UrlToggle } from "@/components/admin/question-bank/tu-only-toggle";
+import { formatCount } from "@/components/admin/question-bank/bank-meta";
+import { getQuestionCounts, getQuestionsForTypeAdmin } from "@/lib/actions/admin-questions";
 import { can, requireAdminPage } from "@/lib/admin/permissions";
 import { QUESTION_IMPORT_SCHEMAS } from "@/lib/question-import/schemas";
-import { SKILL_LABELS } from "@/lib/question-types";
 
-/** Ngân hàng đề (HANDOFF §4.8). Không có ?type → trang tổng: 4 thẻ tổng + bảng
- * dạng bài. Có ?type=<id> → trang quản lý từng dạng (tải file mẫu, nhập file,
- * danh sách & xoá câu) — giữ nguyên luồng nhập theo từng dạng (22 dạng có mẫu).
- * Câu đã ẩn (archivedAt — câu đang nằm trong bài tập nên không xoá hẳn được) không
- * tính vào số câu; danh sách từng dạng chỉ hiện chúng khi bật ?archived=1. */
+/** Ngân hàng đề — giữ đúng bố cục & luồng nhập của bản ban đầu: cột trái là 22
+ * dạng (theo kỹ năng, kèm số câu), bên phải là dạng đang chọn: tải file mẫu,
+ * lọc Tất cả / Luyện đề PTE / Luyện đề Tủ, ghi chú, form nhập file (chọn ngân
+ * hàng PTE hoặc Tủ) và danh sách câu. Chỉ khác: nằm trong khung Admin, chỉ người
+ * có quyền sửa mới thấy form nhập/xoá; câu đang nằm trong bài tập thì được ẩn
+ * thay vì xoá (xem câu đã ẩn bằng ?archived=1). */
 export default async function AdminQuestionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; bank?: string; skill?: string; tu?: string; archived?: string }>;
+  searchParams: Promise<{ type?: string; bank?: string; archived?: string }>;
 }) {
   const user = await requireAdminPage("viewQuestionBank");
   const canEdit = can(user, "editQuestionBank");
 
   const counts = await getQuestionCounts();
-  const { type, bank, skill, tu, archived } = await searchParams;
-  const selectedType = type && Object.hasOwn(QUESTION_IMPORT_SCHEMAS, type) ? type : null;
+  const navCounts = counts.filter((c) => Object.hasOwn(QUESTION_IMPORT_SCHEMAS, c.questionTypeId));
+  const { type, bank, archived } = await searchParams;
+  const selectedType =
+    typeof type === "string" && Object.hasOwn(QUESTION_IMPORT_SCHEMAS, type) ? type : navCounts[0]?.questionTypeId;
+  const selectedBank = bank === "PTE" || bank === "TU" ? bank : undefined;
+  const showArchived = archived === "1";
 
-  if (selectedType) {
-    const selectedBank = bank === "PTE" || bank === "TU" ? bank : undefined;
+  if (!selectedType) {
     return (
-      <QuestionTypeManager
-        counts={counts}
-        selectedType={selectedType}
-        selectedBank={selectedBank}
-        showArchived={archived === "1"}
-        canEdit={canEdit}
-      />
+      <>
+        <AdminPageHeader title="Ngân hàng đề" />
+        <AdminContent>
+          <p className="text-[13.5px]" style={{ color: "var(--adm-ink-3)" }}>
+            Chưa có dạng câu hỏi nào.
+          </p>
+        </AdminContent>
+      </>
     );
   }
 
-  return <QuestionBankOverview counts={counts} group={parseSkillGroup(skill)} tuOnly={tu === "1"} canEdit={canEdit} />;
-}
-
-function overviewHref(group: SkillGroup | null, tuOnly: boolean): string {
-  const params = new URLSearchParams();
-  if (group) params.set("skill", group);
-  if (tuOnly) params.set("tu", "1");
-  const qs = params.toString();
-  return qs ? `/admin/questions?${qs}` : "/admin/questions";
-}
-
-function QuestionBankOverview({
-  counts,
-  group,
-  tuOnly,
-  canEdit,
-}: {
-  counts: QuestionTypeCount[];
-  group: SkillGroup | null;
-  tuOnly: boolean;
-  canEdit: boolean;
-}) {
-  const total = counts.reduce((sum, c) => sum + c.count, 0);
-  const archivedTotal = counts.reduce((sum, c) => sum + c.archivedCount, 0);
-  const rows = group ? counts.filter((c) => skillGroupOf(c.skill) === group) : counts;
-  const rowsTotal = rows.reduce((sum, c) => sum + (tuOnly ? c.tuCount : c.count), 0);
-  const groupLabel = group ? SKILL_GROUPS.find((g) => g.key === group)?.label : null;
-  const importableIds = new Set(Object.keys(QUESTION_IMPORT_SCHEMAS));
+  const schema = QUESTION_IMPORT_SCHEMAS[selectedType];
+  const current = counts.find((c) => c.questionTypeId === selectedType);
+  const questions = await getQuestionsForTypeAdmin(selectedType, selectedBank, showArchived);
+  const typeHref = (b: "PTE" | "TU" | undefined, withArchived = showArchived) =>
+    `/admin/questions?type=${selectedType}${b ? `&bank=${b}` : ""}${withArchived ? "&archived=1" : ""}`;
+  const archivedCount =
+    selectedBank === "TU"
+      ? (current?.archivedTuCount ?? 0)
+      : selectedBank === "PTE"
+        ? (current?.archivedCount ?? 0) - (current?.archivedTuCount ?? 0)
+        : (current?.archivedCount ?? 0);
+  const shownArchived = questions.filter((q) => q.archivedAt).length;
 
   return (
     <>
       <AdminPageHeader
         title="Ngân hàng đề"
-        sub={`${formatCount(total)} câu · ${counts.length} dạng bài${
-          archivedTotal > 0 ? ` · ${formatCount(archivedTotal)} câu đã ẩn` : ""
-        }${canEdit ? "" : " · chế độ chỉ xem"}`}
+        sub={canEdit ? "Chọn 1 dạng câu hỏi để import hoặc quản lý." : "Chế độ chỉ xem."}
       />
-      <AdminContent>
-        <BankSummaryCards counts={counts} activeGroup={group} hrefForGroup={(g) => overviewHref(g, tuOnly)} />
-
-        <Panel
-          title={groupLabel ?? "Tất cả dạng bài"}
-          meta={`${rows.length} dạng · ${formatCount(rowsTotal)} ${tuOnly ? "câu Tủ" : "câu"}`}
-          actions={
-            <>
-              {group && (
-                <Link href={overviewHref(null, tuOnly)} scroll={false} className="adm-btn adm-btn-sm adm-btn-ghost">
-                  Bỏ lọc
-                </Link>
-              )}
-              <TuOnlyToggle checked={tuOnly} href={overviewHref(group, !tuOnly)} />
-            </>
-          }
-        >
-          {canEdit && (
-            <p
-              className="border-b px-4 py-2.5 text-[12.5px]"
-              style={{ borderColor: "var(--adm-line)", color: "var(--adm-ink-3)" }}
-            >
-              Bấm “Nhập & quản lý” ở từng dạng để tải file mẫu (.csv), nhập file câu hỏi hoặc xoá câu.
-            </p>
-          )}
-          <QuestionTypeTable counts={rows} tuOnly={tuOnly} canEdit={canEdit} importableIds={importableIds} />
-        </Panel>
-      </AdminContent>
-    </>
-  );
-}
-
-async function QuestionTypeManager({
-  counts,
-  selectedType,
-  selectedBank,
-  showArchived,
-  canEdit,
-}: {
-  counts: QuestionTypeCount[];
-  selectedType: string;
-  selectedBank: "PTE" | "TU" | undefined;
-  showArchived: boolean;
-  canEdit: boolean;
-}) {
-  const schema = QUESTION_IMPORT_SCHEMAS[selectedType];
-  const current = counts.find((c) => c.questionTypeId === selectedType);
-  const questions = await getQuestionsForTypeAdmin(selectedType, selectedBank, showArchived);
-  const navCounts = counts.filter((c) => Object.hasOwn(QUESTION_IMPORT_SCHEMAS, c.questionTypeId));
-  const mode = current ? gradingModeOf({ id: current.questionTypeId, skill: current.skill }) : null;
-  const typeHref = (b: "PTE" | "TU" | undefined, withArchived = showArchived) =>
-    `/admin/questions?type=${selectedType}${b ? `&bank=${b}` : ""}${withArchived ? "&archived=1" : ""}`;
-
-  // Số câu theo ngân hàng; khi đang hiện câu đã ẩn thì cộng cả câu đã ẩn cho khớp danh sách.
-  const active = { all: current?.count ?? 0, tu: current?.tuCount ?? 0 };
-  const archived = { all: current?.archivedCount ?? 0, tu: current?.archivedTuCount ?? 0 };
-  const bankCount = (b: "PTE" | "TU" | undefined, c: { all: number; tu: number }) =>
-    b === "TU" ? c.tu : b === "PTE" ? c.all - c.tu : c.all;
-  const segCount = (b: "PTE" | "TU" | undefined) => bankCount(b, active) + (showArchived ? bankCount(b, archived) : 0);
-  const archivedInBank = bankCount(selectedBank, archived);
-  const shownArchived = questions.filter((q) => q.archivedAt).length;
-  const shownActive = questions.length - shownArchived;
-
-  const sub = current
-    ? [
-        current.code,
-        SKILL_LABELS[current.skill],
-        `Áp dụng: ${appliesToLabel(current.availableIn)}`,
-        mode ? `Chấm: ${GRADING_MODE_LABEL[mode]}` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : undefined;
-
-  return (
-    <>
-      <AdminPageHeader
-        title={current?.name ?? "Ngân hàng đề"}
-        sub={sub}
-        actions={
-          <Link href="/admin/questions" className="adm-btn adm-btn-sm" aria-label="Về bảng tất cả dạng bài">
-            ← <span className="hidden sm:inline">Tất cả dạng bài</span>
-          </Link>
-        }
-      />
-      <AdminContent className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
+      <AdminContent className="lg:grid lg:grid-cols-[256px_minmax(0,1fr)] lg:items-start">
         <QuestionTypeNav counts={navCounts} selectedType={selectedType} />
 
-        <div className="flex min-w-0 flex-col gap-5">
-          {canEdit && (
-            <Panel
-              title="Nhập câu hỏi từ file"
-              actions={
-                <a href={`/api/admin/questions/template?type=${selectedType}`} className="adm-btn adm-btn-sm">
-                  Tải file mẫu (.csv)
+        <section className="adm-panel flex min-w-0 flex-col gap-4 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-[17px] font-semibold">{current?.name ?? selectedType}</h2>
+            {canEdit && (
+              <a
+                href={`/api/admin/questions/template?type=${selectedType}`}
+                className="text-[13.5px] font-medium underline-offset-2 hover:underline"
+                style={{ color: "var(--adm-brand-text)" }}
+              >
+                Tải file mẫu (.csv)
+              </a>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <nav className="adm-seg" aria-label="Lọc theo ngân hàng đề">
+              {(
+                [
+                  { value: undefined, label: "Tất cả" },
+                  { value: "PTE", label: "Luyện đề PTE" },
+                  { value: "TU", label: "Luyện đề Tủ" },
+                ] as const
+              ).map((opt) => (
+                <a key={opt.label} href={typeHref(opt.value)} aria-current={selectedBank === opt.value ? "true" : undefined}>
+                  {opt.label}
                 </a>
-              }
-              bodyClassName="flex flex-col gap-3 p-4"
+              ))}
+            </nav>
+            {(showArchived || archivedCount > 0) && (
+              <UrlToggle
+                checked={showArchived}
+                href={typeHref(selectedBank, !showArchived)}
+                label={`Hiện câu đã ẩn (${formatCount(archivedCount)})`}
+              />
+            )}
+          </div>
+
+          {canEdit && schema.notes && (
+            <p
+              className="rounded-lg border p-3 text-[12.5px] leading-relaxed"
+              style={{ background: "var(--adm-surface)", borderColor: "var(--adm-line)", color: "var(--adm-ink-2)" }}
             >
-              {schema.notes && (
-                <p
-                  className="rounded-lg border px-3 py-2 text-[12.5px] leading-relaxed"
-                  style={{ background: "var(--adm-surface)", borderColor: "var(--adm-line)", color: "var(--adm-ink-2)" }}
-                >
-                  {schema.notes}
-                </p>
-              )}
-              <QuestionImportForm key={selectedType} questionTypeId={selectedType} />
-            </Panel>
+              {schema.notes}
+            </p>
           )}
 
-          <Panel
-            title="Câu trong ngân hàng đề"
-            meta={`${formatCount(shownActive)} câu${
-              showArchived ? ` · ${formatCount(shownArchived)} đã ẩn` : ""
-            }${canEdit ? "" : " · chỉ xem"}`}
-            actions={
-              <>
-                <SegLinks
-                  items={[
-                    { label: `Tất cả (${formatCount(segCount(undefined))})`, href: typeHref(undefined), active: !selectedBank },
-                    {
-                      label: `Luyện đề PTE (${formatCount(segCount("PTE"))})`,
-                      href: typeHref("PTE"),
-                      active: selectedBank === "PTE",
-                    },
-                    {
-                      label: `Luyện đề Tủ (${formatCount(segCount("TU"))})`,
-                      href: typeHref("TU"),
-                      active: selectedBank === "TU",
-                    },
-                  ]}
-                />
-                {(showArchived || archived.all > 0) && (
-                  <UrlToggle
-                    checked={showArchived}
-                    href={typeHref(selectedBank, !showArchived)}
-                    label={`Hiện câu đã ẩn (${formatCount(archivedInBank)})`}
-                  />
-                )}
-              </>
-            }
-          >
+          {canEdit && <QuestionImportForm key={selectedType} questionTypeId={selectedType} />}
+
+          <div className="flex flex-col gap-1">
+            <p className="text-[13.5px] font-medium">
+              {formatCount(questions.length - shownArchived)} câu trong ngân hàng đề
+              {shownArchived > 0 ? ` · ${formatCount(shownArchived)} đã ẩn` : ""}
+            </p>
             <QuestionBulkList
               key={`${selectedType}-${selectedBank ?? "all"}-${showArchived ? "archived" : "active"}`}
               questions={questions.map((q) => ({
@@ -245,8 +132,8 @@ async function QuestionTypeManager({
               questionTypeId={selectedType}
               canEdit={canEdit}
             />
-          </Panel>
-        </div>
+          </div>
+        </section>
       </AdminContent>
     </>
   );
