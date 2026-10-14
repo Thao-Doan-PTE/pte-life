@@ -45,6 +45,10 @@ export function isAzureTtsConfigured(): boolean {
   return Boolean(process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION);
 }
 
+/** Định dạng audio xin Azure trả về — nằm trong khoá lưu file (lib/tts-cache.ts),
+ * nên đổi định dạng thì các file đã lưu theo định dạng cũ tự bị bỏ qua. */
+export const TTS_OUTPUT_FORMAT = "audio-48khz-96kbitrate-mono-mp3";
+
 function escapeSSML(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -65,7 +69,7 @@ export async function synthesizeSpeech(text: string, voiceName: string): Promise
     headers: {
       "Ocp-Apim-Subscription-Key": key,
       "Content-Type": "application/ssml+xml",
-      "X-Microsoft-OutputFormat": "audio-48khz-96kbitrate-mono-mp3",
+      "X-Microsoft-OutputFormat": TTS_OUTPUT_FORMAT,
     },
     body: ssml,
   });

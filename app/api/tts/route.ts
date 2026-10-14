@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { requireAnyPracticeAccess } from "@/lib/student-access";
 import { consumeRateLimit, consumeRateLimits } from "@/lib/rate-limit";
 import {
@@ -7,14 +7,26 @@ import {
   pickRandomVoice,
   synthesizeSpeech,
 } from "@/lib/azure-tts";
+import { readCachedTts, ttsCachePathname, writeCachedTts } from "@/lib/tts-cache";
 
 const MAX_TEXT_LENGTH = 400;
 const MAX_CACHE_ENTRIES = 500;
 
-// Cache theo (voice::text) trong bộ nhớ server — các câu trong đề tủ WFD là
-// cố định và được nhiều học viên nghe lại nhiều lần, nên cache giúp giảm
-// đáng kể số ký tự tính phí/quota Azure.
+// Các câu đề (WFD, RS...) cố định và được nhiều học viên nghe lại nhiều lần,
+// nên audio được giữ ở 2 tầng để mỗi câu chỉ trả phí Azure 1 lần cho mỗi giọng:
+// 1. Bộ nhớ RAM của server (nhanh nhất, nhưng mất khi Vercel tắt server).
+// 2. File lưu lâu dài (Vercel Blob — lib/tts-cache.ts).
+// Chỉ khi cả 2 tầng đều chưa có mới gọi Azure và tính vào giới hạn "câu mới".
 const audioCache = new Map<string, ArrayBuffer>();
+
+function rememberInMemory(cacheKey: string, audio: ArrayBuffer) {
+  // Giới hạn số câu giữ trong bộ nhớ để server không bị đầy RAM.
+  if (audioCache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = audioCache.keys().next().value;
+    if (oldestKey !== undefined) audioCache.delete(oldestKey);
+  }
+  audioCache.set(cacheKey, audio);
+}
 
 export async function POST(request: NextRequest) {
   let userId: string;
@@ -55,19 +67,21 @@ export async function POST(request: NextRequest) {
   try {
     let audio = audioCache.get(cacheKey);
     if (!audio) {
-      const allowed = isTrial
-        ? await consumeRateLimits(["ttsUser", userId], ["ttsTrialDay", userId])
-        : await consumeRateLimit("ttsUser", userId);
-      if (!allowed) {
-        return NextResponse.json({ error: "Bạn đã nghe quá nhiều câu mới trong 1 giờ, vui lòng thử lại sau." }, { status: 429 });
+      const pathname = ttsCachePathname(voiceName, text);
+      audio = (await readCachedTts(pathname)) ?? undefined;
+      if (!audio) {
+        const allowed = isTrial
+          ? await consumeRateLimits(["ttsUser", userId], ["ttsTrialDay", userId])
+          : await consumeRateLimit("ttsUser", userId);
+        if (!allowed) {
+          return NextResponse.json({ error: "Bạn đã nghe quá nhiều câu mới trong 1 giờ, vui lòng thử lại sau." }, { status: 429 });
+        }
+        const fresh = await synthesizeSpeech(text, voiceName);
+        // Lưu sau khi đã trả audio cho học viên — không làm chậm phản hồi.
+        after(() => writeCachedTts(pathname, fresh));
+        audio = fresh;
       }
-      audio = await synthesizeSpeech(text, voiceName);
-      // Giới hạn số câu giữ trong bộ nhớ để server không bị đầy RAM.
-      if (audioCache.size >= MAX_CACHE_ENTRIES) {
-        const oldestKey = audioCache.keys().next().value;
-        if (oldestKey !== undefined) audioCache.delete(oldestKey);
-      }
-      audioCache.set(cacheKey, audio);
+      rememberInMemory(cacheKey, audio);
     }
 
     return new NextResponse(audio, {
